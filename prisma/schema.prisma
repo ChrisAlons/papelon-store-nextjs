@@ -1,0 +1,250 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SELLER
+}
+
+enum InventoryMovementType {
+  VENTA
+  COMPRA_PROVEEDOR
+  AJUSTE_POSITIVO
+  AJUSTE_NEGATIVO
+  DEVOLUCION_CLIENTE
+}
+
+enum PaymentType {
+  EFECTIVO
+  TARJETA_CREDITO
+  TARJETA_DEBITO
+  TRANSFERENCIA
+  OTRO
+}
+
+enum ExpenseCategory {
+  SERVICIOS // Luz, agua, internet
+  RENTA
+  SUMINISTROS_OFICINA
+  LIMPIEZA
+  SUELDOS
+  MANTENIMIENTO
+  PUBLICIDAD
+  IMPUESTOS
+  OTROS
+}
+
+model User {
+  id                   String                 @id @default(cuid())
+  username             String                 @unique
+  password             String
+  role                 Role
+  sales                Sale[]
+  inventoryMovements   InventoryMovement[]
+  purchases            Purchase[]
+  expenses             Expense[] // Added relation to Expense
+  cashRegisterSessions CashRegisterSession[] // Added relation to CashRegisterSession
+  saleReturns          SaleReturn[] // Added relation to SaleReturn
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+}
+
+model Product {
+  id                   String                @id @default(cuid())
+  name                 String
+  description          String?
+  price                Float
+  cost                 Float
+  stock                Int
+  sku                  String?               @unique
+  categoryId           String? // Added for relation to Category
+  category             Category?             @relation(fields: [categoryId], references: [id]) // Added relation to Category
+  saleItems            SaleItem[]
+  inventoryMovements   InventoryMovement[]
+  purchaseItems        PurchaseItem[]
+  saleReturnItems      SaleReturnItem[] // Added relation to SaleReturnItem
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?  @unique
+  phone     String?
+  address   String?
+  rfc       String?  @unique
+  sales     Sale[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Sale {
+  id                   String                 @id @default(cuid())
+  totalAmount          Float
+  saleDate             DateTime               @default(now())
+  userId               String
+  user                 User                   @relation(fields: [userId], references: [id])
+  customerId           String?
+  customer             Customer?              @relation(fields: [customerId], references: [id])
+  items                SaleItem[]
+  inventoryMovements   InventoryMovement[]    @relation("SaleInventoryMovements")
+  paymentType          PaymentType? // Added payment type
+  cashRegisterSessionId String? // Added for relation to CashRegisterSession
+  cashRegisterSession  CashRegisterSession?   @relation(fields: [cashRegisterSessionId], references: [id]) // Added relation to CashRegisterSession
+  returns              SaleReturn[]           @relation("OriginalSaleForReturn") // Added relation to SaleReturn
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+}
+
+model SaleItem {
+  id          String   @id @default(cuid())
+  saleId      String
+  sale        Sale     @relation(fields: [saleId], references: [id])
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  quantity    Int
+  priceAtSale Float
+  returnItems SaleReturnItem[] // Added relation to SaleReturnItem
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+}
+
+model InventoryMovement {
+  id                String                @id @default(cuid())
+  productId         String
+  product           Product               @relation(fields: [productId], references: [id])
+  userId            String
+  user              User                  @relation(fields: [userId], references: [id])
+  type              InventoryMovementType
+  quantityChange    Int
+  reason            String?
+  relatedSaleId     String?
+  sale              Sale?                 @relation(fields: [relatedSaleId], references: [id], name: "SaleInventoryMovements")
+  relatedPurchaseId String? // Optional: link to purchase if movement is due to a purchase
+  purchase          Purchase?             @relation(fields: [relatedPurchaseId], references: [id], name: "PurchaseInventoryMovements")
+  movementDate      DateTime              @default(now())
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@index([relatedSaleId])
+  @@index([relatedPurchaseId]) // Added index for purchase relation
+}
+
+model Supplier {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  contactName String?
+  email       String?    @unique
+  phone       String?
+  address     String?
+  purchases   Purchase[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Purchase {
+  id                 String                @id @default(cuid())
+  purchaseDate       DateTime              @default(now())
+  supplierId         String
+  supplier           Supplier              @relation(fields: [supplierId], references: [id])
+  userId             String
+  user               User                  @relation(fields: [userId], references: [id])
+  totalAmount        Float // Should be calculated based on items
+  invoiceNumber      String?
+  notes              String?
+  items              PurchaseItem[]
+  inventoryMovements InventoryMovement[]   @relation("PurchaseInventoryMovements")
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @default(now())
+}
+
+model PurchaseItem {
+  id             String   @id @default(cuid())
+  purchaseId     String
+  purchase       Purchase @relation(fields: [purchaseId], references: [id])
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id])
+  quantity       Int
+  costAtPurchase Float // Cost of the product at the time of this specific purchase
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// New Model: Category
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// New Model: Expense
+model Expense {
+  id                      String          @id @default(cuid())
+  expenseDate             DateTime        @default(now())
+  description             String
+  amount                  Float
+  category                ExpenseCategory?
+  userId                  String
+  user                    User            @relation(fields: [userId], references: [id])
+  invoiceOrReceiptNumber  String?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+}
+
+// New Model: CashRegisterSession
+model CashRegisterSession {
+  id                      String    @id @default(cuid())
+  userId                  String
+  user                    User      @relation(fields: [userId], references: [id])
+  openingTime             DateTime  @default(now())
+  closingTime             DateTime?
+  initialBalance          Float
+  calculatedFinalBalance  Float?    // System calculated: initial + cash sales - cash withdrawals
+  actualFinalBalance      Float?    // Physical count at closing
+  difference              Float?    // calculatedFinalBalance - actualFinalBalance
+  notes                   String?
+  sales                   Sale[]    // Sales made during this session
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @default(now())
+}
+
+// New Model: SaleReturn
+model SaleReturn {
+  id                String           @id @default(cuid())
+  originalSaleId    String
+  originalSale      Sale             @relation(fields: [originalSaleId], references: [id], name: "OriginalSaleForReturn")
+  returnDate        DateTime         @default(now())
+  reason            String?
+  totalRefundAmount Float
+  userId            String
+  user              User             @relation(fields: [userId], references: [id])
+  items             SaleReturnItem[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+// New Model: SaleReturnItem
+model SaleReturnItem {
+  id                 String   @id @default(cuid())
+  saleReturnId       String
+  saleReturn         SaleReturn @relation(fields: [saleReturnId], references: [id])
+  originalSaleItemId String   // To know exactly which item from the original sale is being returned
+  originalSaleItem   SaleItem @relation(fields: [originalSaleItemId], references: [id])
+  productId          String   // Denormalized for easier access, or could be derived via originalSaleItem.product
+  product            Product  @relation(fields: [productId], references: [id])
+  quantityReturned   Int
+  refundAmount       Float    // The amount refunded for this specific item
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
