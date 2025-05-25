@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -185,7 +184,7 @@ model Category {
   description String?
   products    Product[]
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  updatedAt   DateTime  @default(now())
 }
 
 // New Model: Expense
@@ -199,7 +198,7 @@ model Expense {
   user                    User            @relation(fields: [userId], references: [id])
   invoiceOrReceiptNumber  String?
   createdAt               DateTime        @default(now())
-  updatedAt               DateTime        @updatedAt
+  updatedAt               DateTime        @default(now())
 }
 
 // New Model: CashRegisterSession

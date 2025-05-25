@@ -68,15 +68,6 @@ export function SiteHeader() {
               style={{marginRight: 8}}
             />
           </label>
-          <Button variant="ghost" asChild size="sm" className="hidden sm:flex">
-            <a
-              href="https://github.com/shadcn-ui/ui/tree/main/apps/v4/app/(examples)/dashboard"
-              rel="noopener noreferrer"
-              target="_blank"
-              className="dark:text-foreground">
-              GitHub
-            </a>
-          </Button>
         </div>
       </div>
     </header>

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSession } from "next-auth/react"
 import {
   IconCamera,
   IconChartBar,
@@ -37,7 +38,6 @@ const data = {
   user: {
     name: "shadcn",
     email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
   },
   navMain: [
     {
@@ -153,6 +153,15 @@ const data = {
 export function AppSidebar({
   ...props
 }) {
+  const { data: session, status } = useSession()
+  // Wait for session to load
+  if (status === 'loading') return null
+  const user = {
+    name: session?.user?.name ?? session?.user?.username ?? 'Guest',
+    email: session?.user?.email ?? session?.user?.username ?? '',
+    avatar: session?.user?.image ?? ''
+  }
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -173,7 +182,7 @@ export function AppSidebar({
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>
   );
