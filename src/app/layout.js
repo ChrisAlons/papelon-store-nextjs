@@ -1,4 +1,9 @@
+import { Inter } from 'next/font/google';
 import './globals.css'
+import SessionProviderWrapper from '@/components/providers/session-provider-wrapper'; // Importar el wrapper
+import { Toaster } from '@/components/ui/sonner';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
   title: 'Next.js',
@@ -7,8 +12,13 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="es" suppressHydrationWarning>
+      <body className={inter.className}>
+        <SessionProviderWrapper>{}
+          {children}
+          <Toaster />
+        </SessionProviderWrapper>
+      </body>
     </html>
-  )
+  );
 }

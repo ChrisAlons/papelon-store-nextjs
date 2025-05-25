@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/prisma/migrations/20250525205855_init_models/migration.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/prisma/migrations/20250525210650_add_purchase_models/migration.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/prisma/migrations/20250525211848_add_sale_return_models/migration.sql" dialect="PostgreSQL" />
+  </component>
+</project>
