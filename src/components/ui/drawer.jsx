@@ -5,10 +5,18 @@ import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
 
-function Drawer({
-  ...props
-}) {
-  return <DrawerPrimitive.Root data-slot="drawer" {...props} />;
+function Drawer({ open, onOpenChange, children, ...props }) {
+  React.useLayoutEffect(() => {
+    const wrapper = document.querySelector('[data-slot="sidebar-wrapper"]');
+    if (!wrapper) return;
+    if (open) {
+      wrapper.setAttribute('inert', '');
+      wrapper.removeAttribute('aria-hidden');
+    } else {
+      wrapper.removeAttribute('inert');
+    }
+  }, [open]);
+  return <DrawerPrimitive.Root open={open} onOpenChange={onOpenChange} data-slot="drawer" {...props}>{children}</DrawerPrimitive.Root>;
 }
 
 function DrawerTrigger({

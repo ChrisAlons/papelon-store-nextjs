@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { IconEdit, IconTrash } from '@tabler/icons-react'
-import { Drawer, DrawerContent, DrawerHeader, DrawerFooter, DrawerTitle, DrawerDescription } from '@/components/ui/drawer'
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
@@ -154,11 +154,14 @@ export default function ProductsPage() {
         </Table>
       )}
     </div>
-    <Drawer open={openDrawer} onOpenChange={setOpenDrawer}>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>{editingProduct ? 'Editar Producto' : 'Nuevo Producto'}</DrawerTitle>
-        </DrawerHeader>
+    <Dialog open={openDrawer} onOpenChange={setOpenDrawer}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editingProduct ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle>
+          <DialogDescription>
+            {editingProduct ? 'Modifica los datos del producto en el formulario.' : 'Completa la información del nuevo producto.'}
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
             <Label htmlFor="name">Nombre</Label>
@@ -197,13 +200,12 @@ export default function ProductsPage() {
               </SelectContent>
             </Select>
           </div>
-          <DrawerFooter>
-            <Button type="submit">{editingProduct ? 'Actualizar' : 'Crear'}</Button>
-            <Button variant="ghost" onClick={() => setOpenDrawer(false)}>Cancelar</Button>
-          </DrawerFooter>
+          <DialogFooter>
+            <Button type="submit">{editingProduct ? 'Actualizar Producto' : 'Crear Producto'}</Button>
+          </DialogFooter>
         </form>
-      </DrawerContent>
-    </Drawer>
+      </DialogContent>
+    </Dialog>
     </>
   )
 }

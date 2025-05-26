@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react'
+import nextReact from 'react'
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import {

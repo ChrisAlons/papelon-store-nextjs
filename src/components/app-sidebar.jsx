@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useSession } from "next-auth/react"
-import { IconDashboard, IconDatabase, IconInnerShadowTop } from "@tabler/icons-react"
+import { IconDashboard, IconDatabase, IconInnerShadowTop, IconTags } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -21,6 +21,7 @@ const data = {
   navMain: [
     { title: "Dashboard", url: "/dashboard", icon: IconDashboard },
     { title: "Productos", url: "/dashboard/products", icon: IconDatabase },
+    { title: "Categorías", url: "/dashboard/categories", icon: IconTags },
   ],
 }
 
