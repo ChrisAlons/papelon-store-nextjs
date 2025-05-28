@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from "@/components/ui/button"
 import { ExportButton, EditButton, ActionButton } from "@/components/ui/action-button"
 import { Input } from "@/components/ui/input"
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { IconChartBar, IconAlertTriangle, IconPackage, IconRefresh, IconDownload, IconCurrencyDollar, IconEdit, IconEye, IconEyeOff, IconSearch, IconTrendingUp, IconTrendingDown, IconRotateCcw } from "@tabler/icons-react"
+import { IconChartBar, IconAlertTriangle, IconPackage, IconRefresh, IconDownload, IconCurrencyDollar, IconEdit, IconEye, IconEyeOff, IconSearch, IconTrendingUp, IconTrendingDown, IconChevronUp, IconChevronDown } from "@tabler/icons-react"
 // Helpers para visualización de movimientos recientes (igual que movimientos)
 const getMovementIcon = (type) => {
   const movementType = type || 'UNKNOWN';
@@ -28,7 +28,7 @@ const getMovementIcon = (type) => {
     case 'VENTA':
       return <IconTrendingDown className="h-4 w-4 text-red-600" />
     case 'ADJUSTMENT':
-      return <IconRotateCcw className="h-4 w-4 text-blue-600" />
+      return <IconRefresh className="h-4 w-4 text-blue-600" />
     case 'DAMAGE':
       return <IconAlertTriangle className="h-4 w-4 text-orange-600" />
     default:
@@ -90,6 +90,53 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true)
   const [showInactive, setShowInactive] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' })
+
+  // Sorting functions
+  const handleSort = (key) => {
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+      }
+      return { key, direction: 'asc' }
+    })
+  }
+
+  // Filter and sort products
+  const filteredAndSortedProducts = useMemo(() => {
+    let filtered = products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (product.sku && product.sku.toLowerCase().includes(searchTerm.toLowerCase()))
+      const matchesStatus = showInactive || product.isActive
+      return matchesSearch && matchesStatus
+    })
+
+    if (!sortConfig.key) return filtered
+    
+    const sorted = [...filtered].sort((a, b) => {
+      let aValue = a[sortConfig.key]
+      let bValue = b[sortConfig.key]
+      
+      // Manejo especial para categorías
+      if (sortConfig.key === 'categoryName') {
+        aValue = a.category?.name || ''
+        bValue = b.category?.name || ''
+      }
+      
+      // Para strings ignorar mayúsculas/minúsculas
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        aValue = aValue.toLowerCase()
+        bValue = bValue.toLowerCase()
+      }
+      
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
+      return 0
+    })
+    return sorted
+  }, [products, searchTerm, showInactive, sortConfig])
 
   useEffect(() => {
     fetchReport()
@@ -174,7 +221,7 @@ export default function InventoryPage() {
 
     const csvData = [
       ['Producto', 'SKU', 'Categoría', 'Stock', 'Costo Unitario', 'Precio', 'Valor Total', 'Estado', 'Fecha Creación'],
-      ...filteredProducts.map(product => [
+      ...filteredAndSortedProducts.map(product => [
         product.name || '',
         product.sku || '',
         product.category?.name || '',
@@ -207,11 +254,6 @@ export default function InventoryPage() {
     toast.success('Inventario exportado correctamente')
   }
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
 
   if (loading) {
     return <div className="p-6">Cargando reporte de inventario...</div>
@@ -329,33 +371,118 @@ export default function InventoryPage() {
         <CardHeader>
           <CardTitle>Todos los Productos</CardTitle>
           <CardDescription>
-            {filteredProducts.length} productos encontrados de {products.length} total
+            {filteredAndSortedProducts.length} productos encontrados de {products.length} total
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Estado</TableHead>
-                <TableHead>Producto</TableHead>
-                <TableHead>Categoría</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Costo</TableHead>
-                <TableHead>Precio</TableHead>
-                <TableHead>Valor Total</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProducts.length === 0 ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead 
+                    onClick={() => handleSort('isActive')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Estado</span>
+                      {sortConfig.key === 'isActive' && (
+                        sortConfig.direction === 'asc' ? 
+                        <IconChevronUp className="h-4 w-4" /> : 
+                        <IconChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    onClick={() => handleSort('name')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Producto</span>
+                      {sortConfig.key === 'name' && (
+                        sortConfig.direction === 'asc' ? 
+                        <IconChevronUp className="h-4 w-4" /> : 
+                        <IconChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    onClick={() => handleSort('categoryName')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors hidden sm:table-cell"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Categoría</span>
+                      {sortConfig.key === 'categoryName' && (
+                        sortConfig.direction === 'asc' ? 
+                        <IconChevronUp className="h-4 w-4" /> : 
+                        <IconChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    onClick={() => handleSort('stock')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors text-right"
+                  >
+                    <div className="flex items-center justify-end space-x-1">
+                      <span>Stock</span>
+                      {sortConfig.key === 'stock' && (
+                        sortConfig.direction === 'asc' ? 
+                        <IconChevronUp className="h-4 w-4" /> : 
+                        <IconChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    onClick={() => handleSort('cost')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors text-right hidden md:table-cell"
+                  >
+                    <div className="flex items-center justify-end space-x-1">
+                      <span>Costo</span>
+                      {sortConfig.key === 'cost' && (
+                        sortConfig.direction === 'asc' ? 
+                        <IconChevronUp className="h-4 w-4" /> : 
+                        <IconChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    onClick={() => handleSort('price')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors text-right hidden lg:table-cell"
+                  >
+                    <div className="flex items-center justify-end space-x-1">
+                      <span>Precio</span>
+                      {sortConfig.key === 'price' && (
+                        sortConfig.direction === 'asc' ? 
+                        <IconChevronUp className="h-4 w-4" /> : 
+                        <IconChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-right hidden lg:table-cell">Valor Total</TableHead>
+                  <TableHead 
+                    onClick={() => handleSort('sku')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors hidden xl:table-cell"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>SKU</span>
+                      {sortConfig.key === 'sku' && (
+                        sortConfig.direction === 'asc' ? 
+                        <IconChevronUp className="h-4 w-4" /> : 
+                        <IconChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-center">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAndSortedProducts.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     {searchTerm ? 'No se encontraron productos que coincidan con la búsqueda' : 'No hay productos registrados'}
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredProducts.map((product) => (
+                filteredAndSortedProducts.map((product) => (
                   <TableRow key={product.id} className={!product.isActive ? 'opacity-60' : ''}>
                     <TableCell>
                       <div className="flex flex-col gap-1">
@@ -378,25 +505,25 @@ export default function InventoryPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{product.category?.name || '-'}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{product.category?.name || '-'}</TableCell>
                     <TableCell>
                       <span className={product.stock === 0 ? 'text-red-600 font-medium' : product.stock <= 10 ? 'text-orange-600 font-medium' : 'text-green-600'}>
                         {product.stock}
                       </span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <div className="flex items-center">
                         <IconCurrencyDollar className="h-4 w-4 text-green-600 mr-1" />
                         <span className="font-mono">{product.cost?.toFixed(2) || '0.00'}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       <div className="flex items-center">
                         <IconCurrencyDollar className="h-4 w-4 text-blue-600 mr-1" />
                         <span className="font-mono">{product.price?.toFixed(2) || '0.00'}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       <div className="flex items-center">
                         <IconCurrencyDollar className="h-4 w-4 text-green-700 mr-1" />
                         <span className="font-mono font-medium">
@@ -404,7 +531,7 @@ export default function InventoryPage() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden xl:table-cell">
                       <span className="font-mono text-sm">{product.sku || '-'}</span>
                     </TableCell>
                     <TableCell>
@@ -424,8 +551,7 @@ export default function InventoryPage() {
                           {product.isActive ? (
                             <IconEyeOff className="h-4 w-4" />
                           ) : (
-                            <IconEye className="h-4 w-4" />
-                          )}
+                            <IconEye className="h-4 w-4" />                          )}
                         </ActionButton>
                       </div>
                     </TableCell>
@@ -434,6 +560,7 @@ export default function InventoryPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -451,8 +578,8 @@ export default function InventoryPage() {
               <TableRow>
                 <TableHead>Categoría</TableHead>
                 <TableHead>Productos</TableHead>
-                <TableHead>Stock Total</TableHead>
-                <TableHead>Valor Total</TableHead>
+                <TableHead className="hidden md:table-cell">Stock Total</TableHead>
+                <TableHead className="hidden lg:table-cell">Valor Total</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -460,8 +587,8 @@ export default function InventoryPage() {
                 <TableRow key={category.id}>
                   <TableCell className="font-medium">{category.name}</TableCell>
                   <TableCell>{category.productCount}</TableCell>
-                  <TableCell>{category.totalStock}</TableCell>
-                  <TableCell>${category.totalValue}</TableCell>
+                  <TableCell className="hidden md:table-cell">{category.totalStock}</TableCell>
+                  <TableCell className="hidden lg:table-cell">${category.totalValue}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -483,9 +610,9 @@ export default function InventoryPage() {
               <TableRow>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Producto</TableHead>
-                <TableHead>Tipo</TableHead>
+                <TableHead className="hidden sm:table-cell">Tipo</TableHead>
                 <TableHead>Cantidad</TableHead>
-                <TableHead>Usuario</TableHead>
+                <TableHead className="hidden md:table-cell">Usuario</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -497,7 +624,7 @@ export default function InventoryPage() {
                   <TableCell className="font-medium">
                     {movement.product?.name}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <Badge className={getMovementColor(movement.movementType || movement.type)}>
                       <div className="flex items-center gap-1">
                         {getMovementIcon(movement.movementType || movement.type)}
@@ -515,7 +642,7 @@ export default function InventoryPage() {
                       {movement.quantity || Math.abs(movement.quantityChange)}
                     </span>
                   </TableCell>
-                  <TableCell>{movement.user?.username}</TableCell>
+                  <TableCell className="hidden md:table-cell">{movement.user?.username}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

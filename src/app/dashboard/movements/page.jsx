@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { ClearButton, ExportButton } from '@/components/ui/action-button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Plus, Package, TrendingUp, TrendingDown, RotateCcw, AlertTriangle, Download } from 'lucide-react'
+import { Plus, Package, TrendingUp, TrendingDown, RotateCcw, AlertTriangle, Download, ChevronUp, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function MovementsPage() {
@@ -27,6 +27,7 @@ export default function MovementsPage() {
     reason: '',
     notes: ''
   })
+  
   // Filters
   const [filters, setFilters] = useState({
     productId: 'all',
@@ -34,6 +35,9 @@ export default function MovementsPage() {
     dateFrom: '',
     dateTo: ''
   })
+
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' })
 
   useEffect(() => {
     fetchMovements()
@@ -162,7 +166,6 @@ export default function MovementsPage() {
         return type
     }
   }
-
   const filteredMovements = movements.filter(movement => {
     const movementType = movement.movementType || movement.type;
     
@@ -173,6 +176,60 @@ export default function MovementsPage() {
     return true
   })
 
+  // Sorting functions
+  const handleSort = (key) => {
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+      }
+      return { key, direction: 'asc' }
+    })
+  }
+
+  const sortedMovements = useMemo(() => {
+    if (!sortConfig.key) return filteredMovements
+    
+    const sorted = [...filteredMovements].sort((a, b) => {
+      let aValue = a[sortConfig.key]
+      let bValue = b[sortConfig.key]
+      
+      // Manejo especial para nombres de productos
+      if (sortConfig.key === 'productName') {
+        aValue = a.product?.name || ''
+        bValue = b.product?.name || ''
+      }
+      
+      // Manejo especial para tipos de movimiento
+      if (sortConfig.key === 'movementType') {
+        aValue = getMovementLabel(a.movementType || a.type)
+        bValue = getMovementLabel(b.movementType || b.type)
+      }
+      
+      // Manejo especial para cantidades
+      if (sortConfig.key === 'quantity') {
+        aValue = a.quantityChange || a.quantity || 0
+        bValue = b.quantityChange || b.quantity || 0
+      }
+      
+      // Para fechas usar Date
+      if (sortConfig.key === 'createdAt') {
+        aValue = new Date(aValue)
+        bValue = new Date(bValue)
+      }
+      
+      // Para strings ignorar mayúsculas/minúsculas
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        aValue = aValue.toLowerCase()
+        bValue = bValue.toLowerCase()
+      }
+      
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
+      return 0
+    })
+    return sorted
+  }, [filteredMovements, sortConfig])
+
   // Obtener tipos únicos de movimientos para el filtro
   const uniqueMovementTypes = [...new Set(movements.map(movement => movement.movementType || movement.type))]
   if (loading) {
@@ -182,17 +239,16 @@ export default function MovementsPage() {
       </div>
     )
   }
-
   // Función para exportar movimientos filtrados a CSV
   const exportToCSV = () => {
-    if (filteredMovements.length === 0) {
+    if (sortedMovements.length === 0) {
       toast.error('No hay movimientos para exportar')
       return
     }
 
     const csvData = [
       ['Fecha', 'Producto', 'SKU', 'Tipo de Movimiento', 'Cantidad', 'Stock Anterior', 'Stock Nuevo', 'Razón', 'Notas'],
-      ...filteredMovements.map(movement => [
+      ...sortedMovements.map(movement => [
         formatDate(movement.createdAt),
         movement.product?.name || 'N/A',
         movement.product?.sku || 'N/A',
@@ -267,7 +323,8 @@ export default function MovementsPage() {
                 <DialogTitle>Registrar Movimiento</DialogTitle>
                 <DialogDescription>
                   Registra un movimiento manual de inventario
-                </DialogDescription>            </DialogHeader>
+                </DialogDescription>
+            </DialogHeader>
               <div className="bg-white p-4 rounded-lg">
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
@@ -420,9 +477,9 @@ export default function MovementsPage() {
                 type="date"
                 value={filters.dateFrom}
                 onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-                className="bg-white"
-              />
-            </div>            <div>
+                className="bg-white"              />
+            </div>
+            <div>
               <Label className="mb-2 block">Fecha Hasta</Label>
               <Input
                 type="date"
@@ -443,73 +500,132 @@ export default function MovementsPage() {
             </div>
           </div>
         </CardContent>
-      </Card>
-
-      {/* Movements Table */}
+      </Card>      {/* Movements Table */}
       <Card>
         <CardHeader>
           <CardTitle>Historial de Movimientos</CardTitle>
           <CardDescription>
-            {filteredMovements.length} movimientos encontrados
+            {sortedMovements.length} movimientos encontrados
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Producto</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Cantidad</TableHead>
-                <TableHead>Razón</TableHead>
-                <TableHead>Notas</TableHead>
-                <TableHead>Usuario</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredMovements.length === 0 ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    No se encontraron movimientos
-                  </TableCell>
-                </TableRow>
-              ) : (filteredMovements.map((movement) => (
-                <TableRow key={movement.id}>
-                  <TableCell>
-                    {new Date(movement.createdAt).toLocaleString('es-ES')}
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{movement.product?.name || 'Producto no encontrado'}</div>
-                    <div className="text-sm text-muted-foreground">
-                      SKU: {movement.product?.sku || 'N/A'}
+                  <TableHead 
+                    onClick={() => handleSort('createdAt')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Fecha</span>
+                      {sortConfig.key === 'createdAt' && (
+                        sortConfig.direction === 'asc' ? 
+                        <ChevronUp className="h-4 w-4" /> : 
+                        <ChevronDown className="h-4 w-4" />                      )}
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getMovementColor(movement.movementType || movement.type)}>
-                      <div className="flex items-center gap-1">
-                        {getMovementIcon(movement.movementType || movement.type)}
-                        {getMovementLabel(movement.movementType || movement.type)}
-                      </div>
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className={
-                      (movement.movementType === 'EXIT' || movement.movementType === 'DAMAGE' || 
-                        movement.type === 'VENTA' || movement.quantityChange < 0) 
-                        ? 'text-red-600' : 'text-green-600'
-                    }>
-                      {movement.quantityChange < 0 ? '' : '+'}
-                      {movement.quantity || Math.abs(movement.quantityChange)}
-                    </span>
-                  </TableCell>
-                  <TableCell>{movement.reason || '-'}</TableCell>
-                  <TableCell>{movement.notes || '-'}</TableCell>
-                  <TableCell>{movement.user?.username || 'Sistema'}</TableCell>
+                  </TableHead>
+                  <TableHead
+                    onClick={() => handleSort('productName')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Producto</span>
+                      {sortConfig.key === 'productName' && (
+                        sortConfig.direction === 'asc' ? 
+                        <ChevronUp className="h-4 w-4" /> : 
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    onClick={() => handleSort('movementType')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors hidden sm:table-cell"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Tipo</span>
+                      {sortConfig.key === 'movementType' && (
+                        sortConfig.direction === 'asc' ? 
+                        <ChevronUp className="h-4 w-4" /> : 
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    onClick={() => handleSort('quantity')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors text-right"
+                  >
+                    <div className="flex items-center justify-end space-x-1">
+                      <span>Cantidad</span>
+                      {sortConfig.key === 'quantity' && (
+                        sortConfig.direction === 'asc' ? 
+                        <ChevronUp className="h-4 w-4" /> : 
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    onClick={() => handleSort('reason')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors hidden md:table-cell"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Razón</span>
+                      {sortConfig.key === 'reason' && (
+                        sortConfig.direction === 'asc' ? 
+                        <ChevronUp className="h-4 w-4" /> : 
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell">Notas</TableHead>
+                  <TableHead className="hidden xl:table-cell">Usuario</TableHead>
                 </TableRow>
-              ))
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {sortedMovements.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      No se encontraron movimientos
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  sortedMovements.map((movement) => (
+                  <TableRow key={movement.id}>
+                    <TableCell>
+                      {new Date(movement.createdAt).toLocaleString('es-ES')}
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{movement.product?.name || 'Producto no encontrado'}</div>
+                      <div className="text-sm text-muted-foreground">
+                        SKU: {movement.product?.sku || 'N/A'}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      <Badge className={getMovementColor(movement.movementType || movement.type)}>
+                        <div className="flex items-center gap-1">
+                          {getMovementIcon(movement.movementType || movement.type)}
+                          {getMovementLabel(movement.movementType || movement.type)}
+                        </div>
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className={
+                        (movement.movementType === 'EXIT' || movement.movementType === 'DAMAGE' || 
+                          movement.type === 'VENTA' || movement.quantityChange < 0) 
+                          ? 'text-red-600 font-medium' : 'text-green-600 font-medium'
+                      }>
+                        {movement.quantityChange < 0 ? '' : '+'}
+                        {movement.quantity || Math.abs(movement.quantityChange)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">{movement.reason || '-'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground hidden lg:table-cell">{movement.notes || '-'}</TableCell>
+                    <TableCell className="text-sm hidden xl:table-cell">{movement.user?.username || 'Sistema'}</TableCell>
+                  </TableRow>                ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

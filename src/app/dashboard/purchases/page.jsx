@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from "@/components/ui/button"
 import { ViewButton, DeleteButton, ExportButton } from "@/components/ui/action-button"
 import { Input } from "@/components/ui/input"
@@ -29,7 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { IconPlus, IconEdit, IconTrash, IconShoppingCart, IconEye, IconMinus, IconDownload } from "@tabler/icons-react"
+import { IconPlus, IconEdit, IconTrash, IconShoppingCart, IconEye, IconMinus, IconDownload, IconChevronUp, IconChevronDown } from "@tabler/icons-react"
 import { toast } from "sonner"
 
 // Helper function to format dates consistently
@@ -57,6 +57,51 @@ export default function PurchasesPage() {
     notes: '',
     items: [{ productId: '', quantity: 1, costAtPurchase: 0 }]
   })
+
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' })
+
+  // Sorting functions
+  const handleSort = (key) => {
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+      }
+      return { key, direction: 'asc' }
+    })
+  }
+
+  const sortedPurchases = useMemo(() => {
+    if (!sortConfig.key) return purchases
+    
+    const sorted = [...purchases].sort((a, b) => {
+      let aValue = a[sortConfig.key]
+      let bValue = b[sortConfig.key]
+      
+      // Manejo especial para nombres de proveedores
+      if (sortConfig.key === 'supplierName') {
+        aValue = a.supplier?.name || ''
+        bValue = b.supplier?.name || ''
+      }
+      
+      // Manejo especial para fechas
+      if (sortConfig.key === 'createdAt') {
+        aValue = new Date(aValue)
+        bValue = new Date(bValue)
+      }
+      
+      // Para strings ignorar mayúsculas/minúsculas
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        aValue = aValue.toLowerCase()
+        bValue = bValue.toLowerCase()
+      }
+      
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
+      return 0
+    })
+    return sorted
+  }, [purchases, sortConfig])
 
   useEffect(() => {
     fetchData()
@@ -331,7 +376,8 @@ export default function PurchasesPage() {
                 <DialogDescription>
                   Registra una nueva compra a proveedor
                 </DialogDescription>
-              </DialogHeader>              <form onSubmit={handleSubmit} className="space-y-4">
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="bg-white p-4 rounded-lg space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -460,7 +506,8 @@ export default function PurchasesPage() {
                       Total: ${getTotalAmount()}
                     </div>
                   </div>
-                </div>                <div className="flex justify-end space-x-2">
+                </div>
+                <div className="flex justify-end space-x-2">
                   <Button type="button" variant="outline" size="sm" onClick={resetForm} className="bg-red-500 text-white hover:bg-red-600">
                     Cancelar
                   </Button>
@@ -485,7 +532,8 @@ export default function PurchasesPage() {
           </DialogHeader>
           <div>
             {viewingPurchase && (
-              <div className="space-y-6">              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
+              <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Fecha de Compra</Label>
                     <p className="text-sm">{formatDate(viewingPurchase.purchaseDate)}</p>
@@ -578,47 +626,108 @@ export default function PurchasesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Proveedor</TableHead>
-                <TableHead>Factura</TableHead>
-                <TableHead>Productos</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {purchases.map((purchase) => (
-                <TableRow key={purchase.id}>
-                  <TableCell>
-                    {formatDate(purchase.purchaseDate)}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {purchase.supplier?.name}
-                  </TableCell>
-                  <TableCell>{purchase.invoiceNumber || '-'}</TableCell>
-                  <TableCell>{purchase._count?.items || 0} items</TableCell>
-                  <TableCell>${purchase.totalAmount.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex flex-wrap justify-end gap-2">
-                      <ViewButton
-                        onClick={() => handleView(purchase)}
-                      >
-                        <IconEye className="h-4 w-4" />
-                      </ViewButton>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead 
+                    onClick={() => handleSort('createdAt')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Fecha</span>
+                      {sortConfig.key === 'createdAt' && (
+                        sortConfig.direction === 'asc' ? 
+                        <IconChevronUp className="h-4 w-4" /> : 
+                        <IconChevronDown className="h-4 w-4" />
+                      )}                    </div>
+                  </TableHead>
+                  <TableHead
+                    onClick={() => handleSort('supplierName')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Proveedor</span>
+                      {sortConfig.key === 'supplierName' && (
+                        sortConfig.direction === 'asc' ? 
+                        <IconChevronUp className="h-4 w-4" /> : 
+                        <IconChevronDown className="h-4 w-4" />
+                      )}
                     </div>
-                  </TableCell>
+                  </TableHead>
+                  <TableHead 
+                    onClick={() => handleSort('invoiceNumber')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors hidden sm:table-cell"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Factura</span>
+                      {sortConfig.key === 'invoiceNumber' && (
+                        sortConfig.direction === 'asc' ? 
+                        <IconChevronUp className="h-4 w-4" /> : 
+                        <IconChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">Productos</TableHead>
+                  <TableHead 
+                    onClick={() => handleSort('totalAmount')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors text-right"
+                  >
+                    <div className="flex items-center justify-end space-x-1">
+                      <span>Total</span>
+                      {sortConfig.key === 'totalAmount' && (
+                        sortConfig.direction === 'asc' ? 
+                        <IconChevronUp className="h-4 w-4" /> : 
+                        <IconChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-center">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {purchases.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              No hay compras registradas
-            </div>
-          )}
+              </TableHeader>
+              <TableBody>
+                {sortedPurchases.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No hay compras registradas
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  sortedPurchases.map((purchase) => (
+                    <TableRow key={purchase.id}>
+                      <TableCell>
+                        {formatDate(purchase.purchaseDate)}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {purchase.supplier?.name}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <span className="text-sm text-muted-foreground">
+                          {purchase.invoiceNumber || '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <span className="text-sm">
+                          {purchase._count?.items || 0} items
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        ${purchase.totalAmount.toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-center">
+                          <ViewButton
+                            onClick={() => handleView(purchase)}
+                          >
+                            <IconEye className="h-4 w-4" />
+                          </ViewButton>
+                        </div>
+                      </TableCell>
+                    </TableRow>                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
