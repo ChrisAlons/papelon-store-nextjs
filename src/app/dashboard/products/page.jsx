@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([])
@@ -128,10 +129,13 @@ export default function ProductsPage() {
   }
 
   return (
-    <>    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-semibold">Productos</h1>
-        <div className="flex items-center gap-4">
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Productos</h1>
+          <p className="text-muted-foreground">Gestiona los productos de la papelería</p>
+        </div>
+        <div className="flex gap-2 items-center">
           <div className="flex items-center space-x-2">
             <Checkbox 
               id="showInactive" 
@@ -139,129 +143,142 @@ export default function ProductsPage() {
               onCheckedChange={setShowInactive}
             />
             <Label htmlFor="showInactive">Mostrar productos inactivos</Label>
-          </div>          <Button onClick={openNew} size="sm">
+          </div>
+          <Button onClick={openNew} size="sm">
             Nuevo Producto
           </Button>
         </div>
       </div>
-      {loading ? (
-        <div>Cargando...</div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Estado</TableHead>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Categoría</TableHead>
-              <TableHead>Precio</TableHead>
-              <TableHead>Costo</TableHead>
-              <TableHead>Stock</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead>Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((prod) => (
-              <TableRow key={prod.id} className={!prod.isActive ? 'opacity-60' : ''}>
-                <TableCell>
-                  <Badge variant={prod.isActive ? 'default' : 'secondary'}>
-                    {prod.isActive ? 'Activo' : 'Inactivo'}
-                  </Badge>
-                </TableCell>
-                <TableCell>{prod.name}</TableCell>
-                <TableCell>{prod.category?.name || '-'}</TableCell>
-                <TableCell>{prod.price}</TableCell>
-                <TableCell>{prod.cost}</TableCell>
-                <TableCell>{prod.stock}</TableCell>
-                <TableCell>{prod.sku}</TableCell>
-                <TableCell>
-                  <div className="flex space-x-2">
-                    <EditButton 
-                      onClick={() => openEdit(prod)}
-                      disabled={!prod.isActive}
-                      title={!prod.isActive ? 'Reactivar producto para editar' : 'Editar producto'}
-                    >
-                      <IconEdit className="h-4 w-4" />
-                    </EditButton>
-                    <ActionButton
-                      variant={prod.isActive ? "destructive" : "default"}
-                      onClick={() => toggleProductStatus(prod)}
-                      title={prod.isActive ? 'Desactivar producto' : 'Reactivar producto'}
-                    >
-                      {prod.isActive ? (
-                        <IconEyeOff className="h-4 w-4" />
-                      ) : (
-                        <IconEye className="h-4 w-4" />
-                      )}
-                    </ActionButton>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Productos</CardTitle>
+          <CardDescription>
+            {products.length} productos registrados
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div>Cargando...</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Categoría</TableHead>
+                  <TableHead>Precio</TableHead>
+                  <TableHead>Costo</TableHead>
+                  <TableHead>Stock</TableHead>
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products.map((prod) => (
+                  <TableRow key={prod.id} className={!prod.isActive ? 'opacity-60' : ''}>
+                    <TableCell>
+                      <Badge variant={prod.isActive ? 'default' : 'secondary'}>
+                        {prod.isActive ? 'Activo' : 'Inactivo'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{prod.name}</TableCell>
+                    <TableCell>{prod.category?.name || '-'}</TableCell>
+                    <TableCell>{prod.price}</TableCell>
+                    <TableCell>{prod.cost}</TableCell>
+                    <TableCell>{prod.stock}</TableCell>
+                    <TableCell>{prod.sku}</TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <EditButton 
+                          onClick={() => openEdit(prod)}
+                          disabled={!prod.isActive}
+                          title={!prod.isActive ? 'Reactivar producto para editar' : 'Editar producto'}
+                        >
+                          <IconEdit className="h-4 w-4" />
+                        </EditButton>
+                        <ActionButton
+                          variant={prod.isActive ? "destructive" : "default"}
+                          onClick={() => toggleProductStatus(prod)}
+                          title={prod.isActive ? 'Desactivar producto' : 'Reactivar producto'}
+                        >
+                          {prod.isActive ? (
+                            <IconEyeOff className="h-4 w-4" />
+                          ) : (
+                            <IconEye className="h-4 w-4" />
+                          )}
+                        </ActionButton>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={openDrawer} onOpenChange={setOpenDrawer}>
+        <DialogContent>
+          <div>
+            <DialogHeader>
+              <DialogTitle>{editingProduct ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle>
+              <DialogDescription>
+                {editingProduct ? 'Modifica los datos del producto en el formulario.' : 'Completa la información del nuevo producto.'}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="bg-white p-4 rounded-lg space-y-4">
+                <div>
+                  <Label htmlFor="name" className="mb-2 block">Nombre *</Label>
+                  <Input id="name" name="name" value={formData.name} onChange={handleChange} required className="bg-white" />
+                </div>
+                <div>
+                  <Label htmlFor="description" className="mb-2 block">Descripción</Label>
+                  <Input id="description" name="description" value={formData.description} onChange={handleChange} className="bg-white" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="price" className="mb-2 block">Precio *</Label>
+                    <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} required className="bg-white" />
                   </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+                  <div>
+                    <Label htmlFor="cost" className="mb-2 block">Costo *</Label>
+                    <Input id="cost" name="cost" type="number" step="0.01" value={formData.cost} onChange={handleChange} required className="bg-white" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="stock" className="mb-2 block">Stock *</Label>
+                    <Input id="stock" name="stock" type="number" value={formData.stock} onChange={handleChange} required className="bg-white" />
+                  </div>
+                  <div>
+                    <Label htmlFor="sku" className="mb-2 block">SKU</Label>
+                    <Input id="sku" name="sku" value={formData.sku} onChange={handleChange} className="bg-white" />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="category" className="mb-2 block">Categoría</Label>
+                  <Select name="categoryId" value={formData.categoryId} onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val }))}>
+                    <SelectTrigger aria-label="Categoría" className="bg-white">
+                      <SelectValue placeholder="Seleccione categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map(cat => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter className="gap-2">
+                <Button variant="outline" type="button" size="sm" onClick={() => setOpenDrawer(false)} className="bg-red-500 text-white hover:bg-red-600">Cancelar</Button>
+                <Button type="submit" size="sm">{editingProduct ? 'Actualizar Producto' : 'Crear Producto'}</Button>
+              </DialogFooter>
+            </form>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
-    <Dialog open={openDrawer} onOpenChange={setOpenDrawer}>
-      <DialogContent>
-        <div>
-          <DialogHeader>
-            <DialogTitle>{editingProduct ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle>
-            <DialogDescription>
-              {editingProduct ? 'Modifica los datos del producto en el formulario.' : 'Completa la información del nuevo producto.'}
-            </DialogDescription>
-          </DialogHeader>          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="bg-white p-4 rounded-lg space-y-4">
-              <div>
-                <Label htmlFor="name" className="mb-2 block">Nombre *</Label>
-                <Input id="name" name="name" value={formData.name} onChange={handleChange} required className="bg-white" />
-              </div>
-              <div>
-                <Label htmlFor="description" className="mb-2 block">Descripción</Label>
-                <Input id="description" name="description" value={formData.description} onChange={handleChange} className="bg-white" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="price" className="mb-2 block">Precio *</Label>
-                  <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} required className="bg-white" />
-                </div>
-                <div>
-                  <Label htmlFor="cost" className="mb-2 block">Costo *</Label>
-                  <Input id="cost" name="cost" type="number" step="0.01" value={formData.cost} onChange={handleChange} required className="bg-white" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="stock" className="mb-2 block">Stock *</Label>
-                  <Input id="stock" name="stock" type="number" value={formData.stock} onChange={handleChange} required className="bg-white" />
-                </div>
-                <div>
-                  <Label htmlFor="sku" className="mb-2 block">SKU</Label>
-                  <Input id="sku" name="sku" value={formData.sku} onChange={handleChange} className="bg-white" />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="category" className="mb-2 block">Categoría</Label>
-                <Select name="categoryId" value={formData.categoryId} onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val }))}>
-                  <SelectTrigger aria-label="Categoría" className="bg-white">
-                    <SelectValue placeholder="Seleccione categoría" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(cat => (
-                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter className="gap-2">
-              <Button variant="outline" type="button" size="sm" onClick={() => setOpenDrawer(false)} className="bg-red-500 text-white hover:bg-red-600">Cancelar</Button>
-              <Button type="submit" size="sm">{editingProduct ? 'Actualizar Producto' : 'Crear Producto'}</Button>
-            </DialogFooter>
-          </form>
-        </div>
-      </DialogContent>
-    </Dialog>
-    </>
   )
 }
