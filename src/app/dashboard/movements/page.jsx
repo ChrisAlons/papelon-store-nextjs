@@ -247,7 +247,7 @@ export default function MovementsPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:flex-row sm:justify-between sm:items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Movimientos de Inventario</h1>
           <p className="text-muted-foreground">
@@ -340,7 +340,8 @@ export default function MovementsPage() {
                       onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                       placeholder="Notas adicionales (opcional)"
                     />
-                  </div>                <div className="flex justify-end space-x-2">
+                  </div>
+                <div className="flex flex-wrap justify-end gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={() => setIsDialogOpen(false)} className="bg-red-500 text-white hover:bg-red-600">
                     Cancelar
                   </Button>
@@ -431,7 +432,7 @@ export default function MovementsPage() {
               />
             </div>
             
-            <div className="flex flex-col justify-end space-y-2">
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end sm:justify-end mt-4 sm:mt-0">
               <ExportButton onClick={exportToCSV}>
                 <Download className="mr-2 h-4 w-4" />
                 Exportar CSV
@@ -472,40 +473,40 @@ export default function MovementsPage() {
                     No se encontraron movimientos
                   </TableCell>
                 </TableRow>
-              ) : (                filteredMovements.map((movement) => (
-                  <TableRow key={movement.id}>
-                    <TableCell>
-                      {new Date(movement.createdAt).toLocaleString('es-ES')}
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">{movement.product?.name || 'Producto no encontrado'}</div>
-                      <div className="text-sm text-muted-foreground">
-                        SKU: {movement.product?.sku || 'N/A'}
+              ) : (filteredMovements.map((movement) => (
+                <TableRow key={movement.id}>
+                  <TableCell>
+                    {new Date(movement.createdAt).toLocaleString('es-ES')}
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium">{movement.product?.name || 'Producto no encontrado'}</div>
+                    <div className="text-sm text-muted-foreground">
+                      SKU: {movement.product?.sku || 'N/A'}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={getMovementColor(movement.movementType || movement.type)}>
+                      <div className="flex items-center gap-1">
+                        {getMovementIcon(movement.movementType || movement.type)}
+                        {getMovementLabel(movement.movementType || movement.type)}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getMovementColor(movement.movementType || movement.type)}>
-                        <div className="flex items-center gap-1">
-                          {getMovementIcon(movement.movementType || movement.type)}
-                          {getMovementLabel(movement.movementType || movement.type)}
-                        </div>
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className={
-                        (movement.movementType === 'EXIT' || movement.movementType === 'DAMAGE' || 
-                         movement.type === 'VENTA' || movement.quantityChange < 0) 
-                          ? 'text-red-600' : 'text-green-600'
-                      }>
-                        {movement.quantityChange < 0 ? '' : '+'}
-                        {movement.quantity || Math.abs(movement.quantityChange)}
-                      </span>
-                    </TableCell>
-                    <TableCell>{movement.reason || '-'}</TableCell>
-                    <TableCell>{movement.notes || '-'}</TableCell>
-                    <TableCell>{movement.user?.username || 'Sistema'}</TableCell>
-                  </TableRow>
-                ))
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <span className={
+                      (movement.movementType === 'EXIT' || movement.movementType === 'DAMAGE' || 
+                        movement.type === 'VENTA' || movement.quantityChange < 0) 
+                        ? 'text-red-600' : 'text-green-600'
+                    }>
+                      {movement.quantityChange < 0 ? '' : '+'}
+                      {movement.quantity || Math.abs(movement.quantityChange)}
+                    </span>
+                  </TableCell>
+                  <TableCell>{movement.reason || '-'}</TableCell>
+                  <TableCell>{movement.notes || '-'}</TableCell>
+                  <TableCell>{movement.user?.username || 'Sistema'}</TableCell>
+                </TableRow>
+              ))
               )}
             </TableBody>
           </Table>

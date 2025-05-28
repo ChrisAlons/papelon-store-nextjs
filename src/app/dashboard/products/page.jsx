@@ -6,7 +6,23 @@ import { EditButton, ActionButton } from '@/components/ui/action-button'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { IconEdit, IconEye, IconEyeOff } from '@tabler/icons-react'
+import { IconEdit, IconEye, IconEyeOff, IconPackage, IconTrendingUp, IconTrendingDown, IconRotateCcw, IconAlertTriangle } from '@tabler/icons-react'
+// Helpers para visualización de stock (igual que movimientos)
+const getStockBadge = (stock) => {
+  if (stock === 0) {
+    return <Badge variant="destructive">Sin Stock</Badge>;
+  } else if (stock <= 10) {
+    return <Badge variant="secondary">Stock Bajo</Badge>;
+  } else {
+    return <Badge variant="default">Stock Normal</Badge>;
+  }
+};
+
+const getStockColor = (stock) => {
+  if (stock === 0) return 'text-red-600 font-medium';
+  if (stock <= 10) return 'text-orange-600 font-medium';
+  return 'text-green-600';
+};
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -135,19 +151,19 @@ export default function ProductsPage() {
           <h1 className="text-3xl font-bold">Productos</h1>
           <p className="text-muted-foreground">Gestiona los productos de la papelería</p>
         </div>
-        <div className="flex gap-2 items-center">
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="showInactive" 
-              checked={showInactive}
-              onCheckedChange={setShowInactive}
-            />
-            <Label htmlFor="showInactive">Mostrar productos inactivos</Label>
-          </div>
-          <Button onClick={openNew} size="sm">
-            Nuevo Producto
-          </Button>
+      <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end sm:justify-end mt-4 sm:mt-0">
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="showInactive" 
+            checked={showInactive}
+            onCheckedChange={setShowInactive}
+          />
+          <Label htmlFor="showInactive">Mostrar productos inactivos</Label>
         </div>
+        <Button onClick={openNew} size="sm">
+          Nuevo Producto
+        </Button>
+      </div>
       </div>
 
       <Card>
@@ -186,7 +202,10 @@ export default function ProductsPage() {
                     <TableCell>{prod.category?.name || '-'}</TableCell>
                     <TableCell>{prod.price}</TableCell>
                     <TableCell>{prod.cost}</TableCell>
-                    <TableCell>{prod.stock}</TableCell>
+                    <TableCell>
+                      <span className={getStockColor(prod.stock)}>{prod.stock}</span>
+                      <div>{getStockBadge(prod.stock)}</div>
+                    </TableCell>
                     <TableCell>{prod.sku}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">

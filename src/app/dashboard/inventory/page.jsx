@@ -16,7 +16,63 @@ import {
 } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { IconChartBar, IconAlertTriangle, IconPackage, IconRefresh, IconDownload, IconCurrencyDollar, IconEdit, IconEye, IconEyeOff, IconSearch } from "@tabler/icons-react"
+import { IconChartBar, IconAlertTriangle, IconPackage, IconRefresh, IconDownload, IconCurrencyDollar, IconEdit, IconEye, IconEyeOff, IconSearch, IconTrendingUp, IconTrendingDown, IconRotateCcw } from "@tabler/icons-react"
+// Helpers para visualización de movimientos recientes (igual que movimientos)
+const getMovementIcon = (type) => {
+  const movementType = type || 'UNKNOWN';
+  switch (movementType) {
+    case 'ENTRY':
+    case 'COMPRA_PROVEEDOR':
+      return <IconTrendingUp className="h-4 w-4 text-green-600" />
+    case 'EXIT':
+    case 'VENTA':
+      return <IconTrendingDown className="h-4 w-4 text-red-600" />
+    case 'ADJUSTMENT':
+      return <IconRotateCcw className="h-4 w-4 text-blue-600" />
+    case 'DAMAGE':
+      return <IconAlertTriangle className="h-4 w-4 text-orange-600" />
+    default:
+      return <IconPackage className="h-4 w-4" />
+  }
+}
+
+const getMovementColor = (type) => {
+  const movementType = type || 'UNKNOWN';
+  switch (movementType) {
+    case 'ENTRY':
+    case 'COMPRA_PROVEEDOR':
+      return 'bg-green-100 text-green-800'
+    case 'EXIT':
+    case 'VENTA':
+      return 'bg-red-100 text-red-800'
+    case 'ADJUSTMENT':
+      return 'bg-blue-100 text-blue-800'
+    case 'DAMAGE':
+      return 'bg-orange-100 text-orange-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
+  }
+}
+
+const getMovementLabel = (type) => {
+  const movementType = type || 'UNKNOWN';
+  switch (movementType) {
+    case 'ENTRY':
+      return 'Entrada'
+    case 'EXIT':
+      return 'Salida'
+    case 'ADJUSTMENT':
+      return 'Ajuste'
+    case 'DAMAGE':
+      return 'Daño'
+    case 'COMPRA_PROVEEDOR':
+      return 'Compra'
+    case 'VENTA':
+      return 'Venta'
+    default:
+      return type
+  }
+}
 import { toast } from "sonner"
 
 // Helper function to format dates consistently
@@ -172,7 +228,7 @@ export default function InventoryPage() {
           <h1 className="text-3xl font-bold">Inventario</h1>
           <p className="text-muted-foreground">Reporte completo del inventario actual</p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end sm:justify-end mt-4 sm:mt-0">
           <Button variant="outline" onClick={() => { fetchReport(); fetchProducts(); }}>
             <IconRefresh className="h-4 w-4 mr-2" />
             Actualizar
@@ -442,12 +498,22 @@ export default function InventoryPage() {
                     {movement.product?.name}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={movement.type === 'VENTA' ? 'destructive' : 'default'}>
-                      {movement.type}
+                    <Badge className={getMovementColor(movement.movementType || movement.type)}>
+                      <div className="flex items-center gap-1">
+                        {getMovementIcon(movement.movementType || movement.type)}
+                        {getMovementLabel(movement.movementType || movement.type)}
+                      </div>
                     </Badge>
                   </TableCell>
-                  <TableCell className={movement.quantityChange > 0 ? 'text-green-600' : 'text-red-600'}>
-                    {movement.quantityChange > 0 ? '+' : ''}{movement.quantityChange}
+                  <TableCell>
+                    <span className={
+                      (movement.movementType === 'EXIT' || movement.movementType === 'DAMAGE' || 
+                        movement.type === 'VENTA' || movement.quantityChange < 0) 
+                        ? 'text-red-600' : 'text-green-600'
+                    }>
+                      {movement.quantityChange < 0 ? '' : '+'}
+                      {movement.quantity || Math.abs(movement.quantityChange)}
+                    </span>
                   </TableCell>
                   <TableCell>{movement.user?.username}</TableCell>
                 </TableRow>

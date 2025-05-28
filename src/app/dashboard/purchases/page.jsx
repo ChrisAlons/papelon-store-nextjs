@@ -312,7 +312,8 @@ export default function PurchasesPage() {
         <div>
           <h1 className="text-3xl font-bold">Compras</h1>
           <p className="text-muted-foreground">Gestiona las compras a proveedores</p>
-        </div>        <div className="flex gap-2">
+        </div>
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end sm:justify-end mt-4 sm:mt-0">
           <ExportButton onClick={exportToCSV}>
             <IconDownload className="h-4 w-4 mr-2" />
             Exportar CSV
@@ -332,7 +333,7 @@ export default function PurchasesPage() {
                 </DialogDescription>
               </DialogHeader>              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="bg-white p-4 rounded-lg space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="supplier" className="mb-2 block">Proveedor *</Label>
                       <Select value={formData.supplierId} onValueChange={(value) => setFormData({...formData, supplierId: value})}>
@@ -600,17 +601,13 @@ export default function PurchasesPage() {
                   <TableCell>{purchase.invoiceNumber || '-'}</TableCell>
                   <TableCell>{purchase._count?.items || 0} items</TableCell>
                   <TableCell>${purchase.totalAmount.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">                    <div className="flex justify-end space-x-2">
+                  <TableCell className="text-right">
+                    <div className="flex flex-wrap justify-end gap-2">
                       <ViewButton
                         onClick={() => handleView(purchase)}
                       >
                         <IconEye className="h-4 w-4" />
                       </ViewButton>
-                      <DeleteButton
-                        onClick={() => handleDelete(purchase.id)}
-                      >
-                        <IconTrash className="h-4 w-4" />
-                      </DeleteButton>
                     </div>
                   </TableCell>
                 </TableRow>

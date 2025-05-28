@@ -5,6 +5,63 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { IconTrendingUp, IconTrendingDown, IconPackage, IconShoppingCart, IconUsers, IconAlertCircle } from "@tabler/icons-react"
+import { TrendingUp, TrendingDown, RotateCcw, AlertTriangle, Package } from 'lucide-react'
+// Copia de helpers visuales de movimientos
+const getMovementIcon = (type) => {
+  const movementType = type || 'UNKNOWN';
+  switch (movementType) {
+    case 'ENTRY':
+    case 'COMPRA_PROVEEDOR':
+      return <TrendingUp className="h-4 w-4 text-green-600" />
+    case 'EXIT':
+    case 'VENTA':
+      return <TrendingDown className="h-4 w-4 text-red-600" />
+    case 'ADJUSTMENT':
+      return <RotateCcw className="h-4 w-4 text-blue-600" />
+    case 'DAMAGE':
+      return <AlertTriangle className="h-4 w-4 text-orange-600" />
+    default:
+      return <Package className="h-4 w-4" />
+  }
+}
+
+const getMovementColor = (type) => {
+  const movementType = type || 'UNKNOWN';
+  switch (movementType) {
+    case 'ENTRY':
+    case 'COMPRA_PROVEEDOR':
+      return 'bg-green-100 text-green-800'
+    case 'EXIT':
+    case 'VENTA':
+      return 'bg-red-100 text-red-800'
+    case 'ADJUSTMENT':
+      return 'bg-blue-100 text-blue-800'
+    case 'DAMAGE':
+      return 'bg-orange-100 text-orange-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
+  }
+}
+
+const getMovementLabel = (type) => {
+  const movementType = type || 'UNKNOWN';
+  switch (movementType) {
+    case 'ENTRY':
+      return 'Entrada'
+    case 'EXIT':
+      return 'Salida'
+    case 'ADJUSTMENT':
+      return 'Ajuste'
+    case 'DAMAGE':
+      return 'Daño'
+    case 'COMPRA_PROVEEDOR':
+      return 'Compra'
+    case 'VENTA':
+      return 'Venta'
+    default:
+      return type
+  }
+}
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -276,13 +333,30 @@ export default function DashboardPage() {
                       {movement.product?.name || 'Producto no encontrado'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={movement.movementType === 'ENTRY' ? 'default' : 'secondary'}>
-                        {movement.movementType === 'ENTRY' ? 'Entrada' : 
-                         movement.movementType === 'EXIT' ? 'Salida' : 
-                         movement.movementType}
+                      <Badge className={getMovementColor(movement.movementType || movement.type)}>
+                        <div className="flex items-center gap-1">
+                          {getMovementIcon(movement.movementType || movement.type)}
+                          {getMovementLabel(movement.movementType || movement.type)}
+                        </div>
                       </Badge>
                     </TableCell>
-                    <TableCell>{movement.quantity}</TableCell>
+                    <TableCell>
+                      {(() => {
+                        const type = movement.movementType || movement.type;
+                        let value = '-';
+                        if (typeof movement.quantity === 'number') {
+                          value = Math.abs(movement.quantity);
+                        } else if (typeof movement.quantityChange === 'number') {
+                          value = Math.abs(movement.quantityChange);
+                        }
+                        const isNegative = (['EXIT', 'DAMAGE', 'VENTA'].includes(type) || (typeof movement.quantityChange === 'number' && movement.quantityChange < 0) || (typeof movement.quantity === 'number' && movement.quantity < 0));
+                        return (
+                          <span className={isNegative ? 'text-red-600' : 'text-green-600'}>
+                            {value !== '-' ? (isNegative ? '-' : '+') : ''}{value}
+                          </span>
+                        );
+                      })()}
+                    </TableCell>
                     <TableCell>{formatDate(movement.createdAt)}</TableCell>
                   </TableRow>
                 ))}
