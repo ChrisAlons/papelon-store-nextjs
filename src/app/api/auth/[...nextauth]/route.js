@@ -10,12 +10,8 @@ export const authOptions = {
       credentials: {
         username: { label: "Username", type: "text", placeholder: "tu_usuario" },
         password: { label: "Password", type: "password" }
-      },
-      async authorize(credentials) {
-        console.log("Authorize function called with credentials:", credentials);
-
+      },      async authorize(credentials) {
         if (!credentials || !credentials.username || !credentials.password) {
-          console.log("Missing credentials");
           return null;
         }
 
@@ -23,14 +19,11 @@ export const authOptions = {
           const user = await prisma.user.findUnique({
             where: { username: credentials.username },
           });
-          console.log("User found in DB:", user);
 
           if (user) {
             const passwordsMatch = bcrypt.compareSync(credentials.password, user.password);
-            console.log("Passwords match:", passwordsMatch);
 
             if (passwordsMatch) {
-              console.log("Login successful, returning user data");
               return {
                 id: user.id,
                 username: user.username,
@@ -39,7 +32,6 @@ export const authOptions = {
               };
             }
           }
-          console.log("Login failed: User not found or password incorrect");
           return null; // Login fallido
         } catch (error) {
           console.error("Error during authorization:", error);

@@ -6,7 +6,21 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 export async function GET(req) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const products = await prisma.product.findMany({ include: { category: true } });
+  
+  const { searchParams } = new URL(req.url);
+  const includeInactive = searchParams.get('includeInactive') === 'true';
+  
+  const where = includeInactive ? {} : { isActive: true };
+  
+  const products = await prisma.product.findMany({ 
+    where,
+    include: { category: true },
+    orderBy: [
+      { isActive: 'desc' }, // Active products first
+      { name: 'asc' }
+    ]
+  });
+  
   return NextResponse.json(products);
 }
 

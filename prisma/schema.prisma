@@ -18,6 +18,10 @@ enum InventoryMovementType {
   AJUSTE_POSITIVO
   AJUSTE_NEGATIVO
   DEVOLUCION_CLIENTE
+  ENTRY
+  EXIT
+  ADJUSTMENT
+  DAMAGE
 }
 
 enum PaymentType {
@@ -63,6 +67,7 @@ model Product {
   cost                 Float
   stock                Int
   sku                  String?               @unique
+  isActive             Boolean               @default(true) // Para manejar productos inactivos
   categoryId           String? // Added for relation to Category
   category             Category?             @relation(fields: [categoryId], references: [id]) // Added relation to Category
   saleItems            SaleItem[]
@@ -123,8 +128,11 @@ model InventoryMovement {
   userId            String
   user              User                  @relation(fields: [userId], references: [id])
   type              InventoryMovementType
-  quantityChange    Int
+  movementType      InventoryMovementType? // Nuevo campo para compatibilidad
+  quantity          Int? // Cantidad absoluta del movimiento
+  quantityChange    Int // Cambio en el inventario (positivo/negativo)
   reason            String?
+  notes             String? // Campo adicional para notas
   relatedSaleId     String?
   sale              Sale?                 @relation(fields: [relatedSaleId], references: [id], name: "SaleInventoryMovements")
   relatedPurchaseId String? // Optional: link to purchase if movement is due to a purchase

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { EditButton, DeleteButton, CancelButton, ClearButton } from '@/components/ui/action-button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -39,6 +38,7 @@ export default function CategoriesPage() {
   useEffect(() => {
     fetchCategories()
   }, [])
+
   const fetchCategories = async () => {
     try {
       const response = await fetch('/api/categories')
@@ -131,17 +131,18 @@ export default function CategoriesPage() {
     category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     category.description?.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
   if (loading) {
     return (
-      <div className="p-6">
+      <div className="container mx-auto py-10">
         <div className="text-center">Cargando categorías...</div>
       </div>
     )
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto py-10">
+      <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Categorías</h1>
           <p className="text-muted-foreground">
@@ -150,12 +151,12 @@ export default function CategoriesPage() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={resetForm} size="sm">
+            <Button onClick={resetForm}>
               <Plus className="mr-2 h-4 w-4" />
               Nueva Categoría
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent>
             <div>
               <DialogHeader>
                 <DialogTitle>
@@ -164,45 +165,44 @@ export default function CategoriesPage() {
                 <DialogDescription>
                   {editingCategory ? 'Modifica los datos de la categoría' : 'Agrega una nueva categoría de productos'}
                 </DialogDescription>
-              </DialogHeader>            
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="bg-white p-4 rounded-lg space-y-4">
+              </DialogHeader>
+              <div>
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <Label htmlFor="name" className="mb-2 block">Nombre *</Label>                  <Input
+                    <Label htmlFor="name">Nombre *</Label>
+                    <Input
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                       placeholder="Nombre de la categoría"
-                      className="bg-white"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="description" className="mb-2 block">Descripción</Label>
+                    <Label htmlFor="description">Descripción</Label>
                     <Input
                       id="description"
                       value={formData.description}
                       onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                       placeholder="Descripción de la categoría"
-                      className="bg-white"
                     />
+                  </div>              <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="outline" className="hover:bg-red-50 hover:border-red-300 text-red-600 bg-red-500 text-white hover:text-red-700" onClick={() => setIsDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button type="submit">
+                      {editingCategory ? 'Actualizar' : 'Crear'}
+                    </Button>
                   </div>
-                </div>              
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setIsDialogOpen(false)} className="bg-red-500 text-white hover:bg-red-600">
-                    Cancelar
-                  </Button>
-                  <Button type="submit" size="sm">
-                    {editingCategory ? 'Actualizar' : 'Crear'}
-                  </Button>
-                </div>
-              </form>
+                </form>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Search */}      <Card>
+      {/* Search */}
+      <Card className="mb-6">
         <CardHeader>
           <CardTitle>Búsqueda</CardTitle>
         </CardHeader>
@@ -219,12 +219,15 @@ export default function CategoriesPage() {
                   className="pl-10"
                 />
               </div>
-            </div>            <div className="flex items-end">
-              <ClearButton
+            </div>
+
+            <div className="flex items-end">
+              <Button
+                variant="outline"
                 onClick={() => setSearchTerm('')}
               >
                 Limpiar Búsqueda
-              </ClearButton>
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -286,24 +289,30 @@ export default function CategoriesPage() {
                         <Badge variant="secondary">
                           {category._count?.products || 0} productos
                         </Badge>
-                      </div>                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
+                      </div>
+                    </TableCell>
+                    <TableCell>                      <div className="text-sm">
                         {formatDate(category.createdAt)}
                       </div>
                     </TableCell>
                     <TableCell>                      <div className="flex space-x-2">
-                        <EditButton
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="hover:bg-blue-50 hover:border-blue-300 text-blue-600"
                           onClick={() => handleEdit(category)}
                         >
                           <Edit className="h-4 w-4" />
-                        </EditButton>
-                        <DeleteButton
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="hover:bg-red-50 hover:border-red-300 text-red-600 bg-red-500 text-white hover:text-red-700"
                           onClick={() => handleDelete(category.id)}
                           disabled={category._count?.products > 0}
                         >
                           <Trash2 className="h-4 w-4" />
-                        </DeleteButton>
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
