@@ -330,41 +330,46 @@ export default function PurchasesPage() {
                 <DialogDescription>
                   Registra una nueva compra a proveedor
                 </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">                <div className="grid grid-cols-2 gap-4 bg-white p-4 rounded-lg">
-                  <div>
-                    <Label htmlFor="supplier" className="mb-2 block">Proveedor *</Label>
-                    <Select value={formData.supplierId} onValueChange={(value) => setFormData({...formData, supplierId: value})}>
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="Selecciona un proveedor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {suppliers.map((supplier) => (
-                          <SelectItem key={supplier.id} value={supplier.id}>
-                            {supplier.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              </DialogHeader>              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="bg-white p-4 rounded-lg space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="supplier" className="mb-2 block">Proveedor *</Label>
+                      <Select value={formData.supplierId} onValueChange={(value) => setFormData({...formData, supplierId: value})}>
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="Selecciona un proveedor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {suppliers.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.id}>
+                              {supplier.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="invoiceNumber" className="mb-2 block">Número de Factura</Label>
+                      <Input
+                        id="invoiceNumber"
+                        value={formData.invoiceNumber}
+                        onChange={(e) => setFormData({...formData, invoiceNumber: e.target.value})}
+                        placeholder="Número de factura"
+                        className="bg-white"
+                      />
+                    </div>
                   </div>
+                  
                   <div>
-                    <Label htmlFor="invoiceNumber" className="mb-2 block">Número de Factura</Label>                    <Input
-                      id="invoiceNumber"
-                      value={formData.invoiceNumber}
-                      onChange={(e) => setFormData({...formData, invoiceNumber: e.target.value})}
-                      placeholder="Número de factura"
+                    <Label htmlFor="notes" className="mb-2 block">Notas</Label>
+                    <Input
+                      id="notes"
+                      value={formData.notes}
+                      onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                      placeholder="Notas adicionales"
                       className="bg-white"
                     />
                   </div>
-                </div>                <div className="bg-white p-4 rounded-lg">
-                  <Label htmlFor="notes" className="mb-2 block">Notas</Label>
-                  <Input
-                    id="notes"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                    placeholder="Notas adicionales"
-                    className="bg-white"
-                  />
                 </div>
 
                 <div>
@@ -375,10 +380,10 @@ export default function PurchasesPage() {
                       Agregar Producto
                     </Button>
                   </div>
-                  
-                  <div className="space-y-4">
-                    {formData.items.map((item, index) => (                      <div key={index} className="border rounded-lg p-4 space-y-3 bg-white">
-                        <div className="w-full bg-white p-3 rounded">
+                    <div className="space-y-4">
+                    {formData.items.map((item, index) => (
+                      <div key={index} className="border rounded-lg p-4 space-y-3">
+                        <div>
                           <Label className="mb-2 block">Producto</Label>
                           <Select 
                             value={item.productId} 
@@ -398,7 +403,9 @@ export default function PurchasesPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                        </div>                        <div className="grid grid-cols-5 gap-2 bg-white p-3 rounded">
+                        </div>
+                        
+                        <div className="grid grid-cols-5 gap-2">
                           <div>
                             <Label className="mb-2 block">Cantidad</Label>
                             <Input
@@ -411,7 +418,8 @@ export default function PurchasesPage() {
                             />
                           </div>
                           <div>
-                            <Label className="mb-2 block">Costo</Label>                            <Input
+                            <Label className="mb-2 block">Costo</Label>
+                            <Input
                               type="number"
                               step="0.01"
                               value={item.costAtPurchase}
@@ -422,7 +430,8 @@ export default function PurchasesPage() {
                             />
                           </div>
                           <div>
-                            <Label className="mb-2 block">Subtotal</Label>                            <Input
+                            <Label className="mb-2 block">Subtotal</Label>
+                            <Input
                               type="text"
                               value={`$${(item.quantity * item.costAtPurchase).toFixed(2)}`}
                               disabled

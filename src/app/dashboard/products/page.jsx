@@ -210,44 +210,49 @@ export default function ProductsPage() {
             <DialogDescription>
               {editingProduct ? 'Modifica los datos del producto en el formulario.' : 'Completa la información del nuevo producto.'}
             </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="p-4 space-y-4">
-            <div>
-              <Label htmlFor="name">Nombre</Label>
-              <Input id="name" name="name" value={formData.name} onChange={handleChange} required />
-            </div>
-            <div>
-              <Label htmlFor="description">Descripción</Label>
-              <Input id="description" name="description" value={formData.description} onChange={handleChange} />
-            </div>
-            <div>
-              <Label htmlFor="price">Precio</Label>
-              <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} required />
-            </div>
-            <div>
-              <Label htmlFor="cost">Costo</Label>
-              <Input id="cost" name="cost" type="number" step="0.01" value={formData.cost} onChange={handleChange} required />
-            </div>
-            <div>
-              <Label htmlFor="stock">Stock</Label>
-              <Input id="stock" name="stock" type="number" value={formData.stock} onChange={handleChange} required />
-            </div>
-            <div>
-              <Label htmlFor="sku">SKU</Label>
-              <Input id="sku" name="sku" value={formData.sku} onChange={handleChange} />
-            </div>
-            <div>
-              <Label htmlFor="category">Categoría</Label>
-              <Select name="categoryId" value={formData.categoryId} onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val }))}>
-                <SelectTrigger aria-label="Categoría">
-                  <SelectValue placeholder="Seleccione categoría" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          </DialogHeader>          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="bg-white p-4 rounded-lg space-y-4">
+              <div>
+                <Label htmlFor="name" className="mb-2 block">Nombre *</Label>
+                <Input id="name" name="name" value={formData.name} onChange={handleChange} required className="bg-white" />
+              </div>
+              <div>
+                <Label htmlFor="description" className="mb-2 block">Descripción</Label>
+                <Input id="description" name="description" value={formData.description} onChange={handleChange} className="bg-white" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="price" className="mb-2 block">Precio *</Label>
+                  <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} required className="bg-white" />
+                </div>
+                <div>
+                  <Label htmlFor="cost" className="mb-2 block">Costo *</Label>
+                  <Input id="cost" name="cost" type="number" step="0.01" value={formData.cost} onChange={handleChange} required className="bg-white" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="stock" className="mb-2 block">Stock *</Label>
+                  <Input id="stock" name="stock" type="number" value={formData.stock} onChange={handleChange} required className="bg-white" />
+                </div>
+                <div>
+                  <Label htmlFor="sku" className="mb-2 block">SKU</Label>
+                  <Input id="sku" name="sku" value={formData.sku} onChange={handleChange} className="bg-white" />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="category" className="mb-2 block">Categoría</Label>
+                <Select name="categoryId" value={formData.categoryId} onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val }))}>
+                  <SelectTrigger aria-label="Categoría" className="bg-white">
+                    <SelectValue placeholder="Seleccione categoría" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map(cat => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <DialogFooter className="gap-2">
               <Button variant="outline" type="button" size="sm" onClick={() => setOpenDrawer(false)} className="bg-red-500 text-white hover:bg-red-600">Cancelar</Button>
