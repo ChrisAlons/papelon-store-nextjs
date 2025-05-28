@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useSession } from "next-auth/react"
-import { IconDashboard, IconDatabase, IconInnerShadowTop, IconTags, IconTruck, IconShoppingCart, IconChartBar, IconAdjustments } from "@tabler/icons-react"
+import { IconDashboard, IconDatabase, IconInnerShadowTop, IconTags, IconTruck, IconShoppingCart, IconChartBar, IconAdjustments, IconCash, IconUsers, IconFileAnalytics } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -24,6 +24,9 @@ const data = {
     { title: "Categorías", url: "/dashboard/categories", icon: IconTags },
     { title: "Proveedores", url: "/dashboard/suppliers", icon: IconTruck },
     { title: "Compras", url: "/dashboard/purchases", icon: IconShoppingCart },
+    { title: "Ventas", url: "/dashboard/sales", icon: IconCash },
+    { title: "Clientes", url: "/dashboard/customers", icon: IconUsers },
+    { title: "Reportes", url: "/dashboard/reports", icon: IconFileAnalytics },
     { title: "Inventario", url: "/dashboard/inventory", icon: IconChartBar },
     { title: "Movimientos", url: "/dashboard/movements", icon: IconAdjustments },
   ],

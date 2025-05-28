@@ -1,5 +1,22 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
+## 🚀 Quick Setup
+
+For a complete database setup with sample data, run:
+
+```bash
+npm install
+npm run setup
+npm run dev
+```
+
+**Login credentials:**
+- Username: `admin`, Password: `admin123`
+- Username: `vendedor1`, Password: `vendedor123`
+- Username: `cajero1`, Password: `cajero123`
+
+📋 [See detailed setup instructions](./SETUP.md)
+
 ## Getting Started
 
 First, run the development server:

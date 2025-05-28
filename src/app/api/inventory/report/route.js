@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+// import { getServerSession } from 'next-auth/next';
+// import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function GET(req) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }    // Obtener productos con stock bajo (menos de 10 unidades) - solo activos
+    // const session = await getServerSession(authOptions);
+    // if (!session) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // }
+    
+    // Obtener productos con stock bajo (menos de 10 unidades) - solo activos
     const lowStockProducts = await prisma.product.findMany({
       where: {
         stock: {

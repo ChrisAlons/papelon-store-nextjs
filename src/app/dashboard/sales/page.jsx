@@ -1,0 +1,1035 @@
+"use client"
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { Button } from '@/components/ui/button'
+import { ActionButton } from '@/components/ui/action-button'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
+import { generateReceiptPDF } from '@/components/sales/receipt-pdf'
+import { 
+  IconPlus, 
+  IconEye, 
+  IconRefresh,
+  IconDownload,
+  IconCash,
+  IconChevronUp, 
+  IconChevronDown,
+  IconShoppingCart,
+  IconUsers,
+  IconTrendingUp,
+  IconReceipt,
+  IconSearch,
+  IconFilter,
+  IconX
+} from '@tabler/icons-react'
+
+export default function SalesPage() {
+  const [sales, setSales] = useState([])
+  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [showPOSModal, setShowPOSModal] = useState(false)
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [selectedSale, setSelectedSale] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [sortConfig, setSortConfig] = useState({ key: 'saleDate', direction: 'desc' })
+  const [filters, setFilters] = useState({
+    dateFrom: '',
+    dateTo: '',
+    userId: '',
+    paymentType: 'all'  })
+
+  // Estados para el POS
+  const [posData, setPosData] = useState({
+    customerId: 'general',
+    paymentType: 'EFECTIVO',
+    items: [],
+    subtotal: 0,
+    discount: 0,
+    total: 0
+  })
+  const [products, setProducts] = useState([])
+  const [customers, setCustomers] = useState([])
+  const [searchProduct, setSearchProduct] = useState('')
+  const [showNewCustomerForm, setShowNewCustomerForm] = useState(false)
+  const [newCustomer, setNewCustomer] = useState({
+    name: '',
+    email: '',
+    phone: '',    address: ''
+  })
+
+  const fetchSales = useCallback(async () => {
+    try {
+      setLoading(true)      // Filtrar parámetros vacíos y valores "all"
+      const cleanFilters = Object.fromEntries(
+        Object.entries(filters).filter(([key, value]) => value && value !== 'all')
+      )
+      
+      const queryParams = new URLSearchParams({
+        search: searchTerm,
+        ...cleanFilters
+      }).toString()
+      
+      const response = await fetch(`/api/sales?${queryParams}`)
+      if (!response.ok) throw new Error('Error al cargar ventas')
+      
+      const data = await response.json()
+      setSales(data.sales || [])
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Error al cargar las ventas')
+    } finally {
+      setLoading(false)
+    }
+  }, [searchTerm, filters])
+  const fetchStats = useCallback(async () => {
+    try {
+      const response = await fetch('/api/sales/stats?period=today')
+      if (!response.ok) throw new Error('Error al cargar estadísticas')
+      
+      const data = await response.json()
+      setStats(data)
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Error al cargar estadísticas')
+    }
+  }, [])
+  const fetchCustomers = useCallback(async () => {
+    try {
+      const response = await fetch('/api/customers')
+      if (!response.ok) throw new Error('Error al cargar clientes')
+      
+      const data = await response.json()
+      setCustomers(data)
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Error al cargar clientes')
+    }  }, [])
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    fetchSales()
+    fetchStats()
+    fetchCustomers()
+  }, [fetchSales, fetchStats, fetchCustomers])
+
+  const searchProducts = async (query) => {
+    if (!query.trim()) {
+      setProducts([])
+      return
+    }
+    
+    try {
+      const response = await fetch(`/api/sales/products?search=${encodeURIComponent(query)}&limit=10`)
+      if (!response.ok) throw new Error('Error al buscar productos')
+      
+      const data = await response.json()
+      setProducts(data)
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Error al buscar productos')
+    }
+  }
+
+  // Funciones de ordenamiento
+  const handleSort = (key) => {
+    let direction = 'asc'
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc'
+    }
+    setSortConfig({ key, direction })
+  }
+
+  const sortedSales = useMemo(() => {
+    if (!sortConfig.key) return sales
+    
+    return [...sales].sort((a, b) => {
+      const aValue = getNestedValue(a, sortConfig.key)
+      const bValue = getNestedValue(b, sortConfig.key)
+      
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [sales, sortConfig])
+
+  const getNestedValue = (obj, path) => {
+    return path.split('.').reduce((current, key) => current?.[key], obj)
+  }
+
+  // Funciones para el POS
+  const addProductToPOS = (product) => {
+    if (!product.canSell) {
+      toast.error(`${product.name} no está disponible para venta`)
+      return
+    }
+
+    const existingItemIndex = posData.items.findIndex(item => item.productId === product.id)
+    
+    if (existingItemIndex >= 0) {
+      const newItems = [...posData.items]
+      const currentQuantity = newItems[existingItemIndex].quantity
+      
+      if (currentQuantity >= product.stock) {
+        toast.error(`Stock insuficiente para ${product.name}`)
+        return
+      }
+      
+      newItems[existingItemIndex].quantity += 1
+      updatePOSItems(newItems)
+    } else {
+      const newItem = {
+        productId: product.id,
+        productName: product.name,
+        productSku: product.sku,
+        priceAtSale: product.price,
+        quantity: 1,
+        maxStock: product.stock
+      }
+      updatePOSItems([...posData.items, newItem])
+    }
+    
+    setSearchProduct('')
+    setProducts([])
+  }
+
+  const updatePOSItems = (items) => {
+    const subtotal = items.reduce((sum, item) => sum + (item.priceAtSale * item.quantity), 0)
+    const total = subtotal - posData.discount
+    
+    setPosData(prev => ({
+      ...prev,
+      items,
+      subtotal,
+      total: Math.max(0, total)
+    }))
+  }
+
+  const updateItemQuantity = (index, quantity) => {
+    if (quantity <= 0) {
+      removeItem(index)
+      return
+    }
+    
+    const item = posData.items[index]
+    if (quantity > item.maxStock) {
+      toast.error(`Stock insuficiente. Máximo: ${item.maxStock}`)
+      return
+    }
+    
+    const newItems = [...posData.items]
+    newItems[index].quantity = quantity
+    updatePOSItems(newItems)
+  }
+
+  const removeItem = (index) => {
+    const newItems = posData.items.filter((_, i) => i !== index)
+    updatePOSItems(newItems)
+  }
+
+  const createNewCustomer = async () => {
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCustomer)
+      })
+      
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Error al crear cliente')
+      }
+      
+      const customer = await response.json()
+      setCustomers(prev => [...prev, customer])
+      setPosData(prev => ({ ...prev, customerId: customer.id }))
+      setNewCustomer({ name: '', email: '', phone: '', address: '' })
+      setShowNewCustomerForm(false)
+      toast.success('Cliente creado exitosamente')
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error(error.message)
+    }
+  }
+  const processSale = async () => {
+    if (posData.items.length === 0) {
+      toast.error('Agregue al menos un producto')
+      return
+    }
+    
+    try {      const saleData = {
+        customerId: posData.customerId === 'general' ? null : posData.customerId,
+        // No enviamos userId, el API usará el usuario admin por defecto
+        paymentType: posData.paymentType,
+        totalAmount: posData.total,
+        items: posData.items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          priceAtSale: item.priceAtSale
+        }))
+      }
+      
+      const response = await fetch('/api/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(saleData)
+      })
+      
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Error al procesar la venta')
+      }
+        const sale = await response.json()
+      toast.success('Venta procesada exitosamente')
+      
+      // Generar PDF automáticamente
+      generateReceiptPDF(sale)
+      
+      // Resetear POS
+      setPosData({
+        customerId: 'general',
+        paymentType: 'EFECTIVO',
+        items: [],
+        subtotal: 0,
+        discount: 0,
+        total: 0
+      })
+      setShowPOSModal(false)
+      
+      // Actualizar listas
+      fetchSales()
+      fetchStats()
+      
+      // Mostrar detalle de la venta
+      viewSaleDetail(sale.id)
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error(error.message)
+    }
+  }
+
+  const viewSaleDetail = async (saleId) => {
+    try {
+      const response = await fetch(`/api/sales/${saleId}`)
+      if (!response.ok) throw new Error('Error al cargar detalle de venta')
+      
+      const sale = await response.json()
+      setSelectedSale(sale)
+      setShowDetailModal(true)
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Error al cargar el detalle de la venta')
+    }
+  }
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN'
+    }).format(amount)
+  }
+  const formatDate = (date) => {
+    return new Intl.DateTimeFormat('es-MX', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(date))
+  }
+
+  const handleDownloadPDF = () => {
+    if (selectedSale) {
+      generateReceiptPDF(selectedSale)
+      toast.success('PDF descargado exitosamente')
+    }  }
+
+  useEffect(() => {
+    const delayedSearch = setTimeout(() => {
+      if (searchProduct) {
+        searchProducts(searchProduct)
+      } else {
+        setProducts([])
+      }
+    }, 300)
+
+    return () => clearTimeout(delayedSearch)
+  }, [searchProduct])
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Estadísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2">
+              <IconCash className="h-8 w-8 text-green-600" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Ventas Hoy</p>
+                <p className="text-2xl font-bold">{formatCurrency(stats?.summary?.totalRevenue || 0)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2">
+              <IconShoppingCart className="h-8 w-8 text-blue-600" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Transacciones</p>
+                <p className="text-2xl font-bold">{stats?.summary?.salesCount || 0}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2">
+              <IconTrendingUp className="h-8 w-8 text-purple-600" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Promedio por Venta</p>
+                <p className="text-2xl font-bold">{formatCurrency(stats?.summary?.averageSaleAmount || 0)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2">
+              <IconUsers className="h-8 w-8 text-orange-600" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Productos Vendidos</p>
+                <p className="text-2xl font-bold">{stats?.summary?.totalItems || 0}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Acciones principales */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Punto de Venta</h1>
+          <p className="text-muted-foreground">Gestiona las ventas y transacciones</p>
+        </div>
+        
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => fetchSales()} variant="outline" size="sm">
+            <IconRefresh className="h-4 w-4 mr-2" />
+            Actualizar
+          </Button>
+          <Button onClick={() => setShowPOSModal(true)} size="sm">
+            <IconPlus className="h-4 w-4 mr-2" />
+            Nueva Venta
+          </Button>
+        </div>
+      </div>
+
+      {/* Filtros y búsqueda */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div>
+              <Label className="mb-2 block">Buscar</Label>
+              <div className="relative">
+                <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="ID, cliente, vendedor..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label className="mb-2 block">Fecha Desde</Label>
+              <Input
+                type="date"
+                value={filters.dateFrom}
+                onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+              />
+            </div>
+            
+            <div>
+              <Label className="mb-2 block">Fecha Hasta</Label>
+              <Input
+                type="date"
+                value={filters.dateTo}
+                onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+              />
+            </div>
+            
+            <div>
+              <Label className="mb-2 block">Tipo de Pago</Label>              <Select value={filters.paymentType} onValueChange={(value) => setFilters(prev => ({ ...prev, paymentType: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="EFECTIVO">Efectivo</SelectItem>
+                  <SelectItem value="TARJETA_CREDITO">Tarjeta de Crédito</SelectItem>
+                  <SelectItem value="TARJETA_DEBITO">Tarjeta de Débito</SelectItem>
+                  <SelectItem value="TRANSFERENCIA">Transferencia</SelectItem>
+                  <SelectItem value="OTRO">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-end">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setFilters({ dateFrom: '', dateTo: '', userId: '', paymentType: 'all' })}
+                className="w-full"
+              >
+                <IconX className="h-4 w-4 mr-2" />
+                Limpiar
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Lista de ventas */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Historial de Ventas</CardTitle>
+          <CardDescription>
+            {sales.length} ventas encontradas
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead 
+                    onClick={() => handleSort('saleDate')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Fecha</span>
+                      {sortConfig.key === 'saleDate' && (
+                        sortConfig.direction === 'asc' ? 
+                        <IconChevronUp className="h-4 w-4" /> : 
+                        <IconChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  
+                  <TableHead 
+                    onClick={() => handleSort('id')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>ID</span>
+                      {sortConfig.key === 'id' && (
+                        sortConfig.direction === 'asc' ? 
+                        <IconChevronUp className="h-4 w-4" /> : 
+                        <IconChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  
+                  <TableHead 
+                    onClick={() => handleSort('customer.name')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors hidden sm:table-cell"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Cliente</span>
+                      {sortConfig.key === 'customer.name' && (
+                        sortConfig.direction === 'asc' ? 
+                        <IconChevronUp className="h-4 w-4" /> : 
+                        <IconChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  
+                  <TableHead 
+                    onClick={() => handleSort('totalAmount')} 
+                    className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Total</span>
+                      {sortConfig.key === 'totalAmount' && (
+                        sortConfig.direction === 'asc' ? 
+                        <IconChevronUp className="h-4 w-4" /> : 
+                        <IconChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  
+                  <TableHead className="hidden md:table-cell">Tipo de Pago</TableHead>
+                  <TableHead className="hidden lg:table-cell">Vendedor</TableHead>
+                  <TableHead className="hidden lg:table-cell">Items</TableHead>
+                  <TableHead className="text-center">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      Cargando ventas...
+                    </TableCell>
+                  </TableRow>
+                ) : sortedSales.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      {searchTerm || Object.values(filters).some(v => v) ? 'No se encontraron ventas que coincidan con los filtros' : 'No hay ventas registradas'}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  sortedSales.map((sale) => (
+                    <TableRow key={sale.id}>
+                      <TableCell>{formatDate(sale.saleDate)}</TableCell>
+                      <TableCell>
+                        <span className="font-mono text-sm">{sale.id.slice(-8)}</span>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        {sale.customer ? sale.customer.name : 'Cliente General'}
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-semibold text-green-600">
+                          {formatCurrency(sale.totalAmount)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <Badge variant="outline">
+                          {sale.paymentType || 'EFECTIVO'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {sale.user?.username || 'N/A'}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <Badge variant="secondary">
+                          {sale._count?.items || sale.items?.length || 0}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <ActionButton
+                          onClick={() => viewSaleDetail(sale.id)}
+                          size="sm"
+                          variant="ghost"
+                        >
+                          <IconEye className="h-4 w-4" />
+                        </ActionButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Modal POS */}
+      <Dialog open={showPOSModal} onOpenChange={setShowPOSModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nueva Venta - Punto de Venta</DialogTitle>
+            <DialogDescription>
+              Agrega productos y procesa la venta
+            </DialogDescription>
+          </DialogHeader>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Panel izquierdo - Productos y búsqueda */}
+            <div className="bg-white p-4 rounded-lg space-y-4"><div>
+                <Label className="mb-2 block">Buscar Producto</Label>
+                <div className="relative">
+                  <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nombre, SKU..."
+                    value={searchProduct}
+                    onChange={(e) => setSearchProduct(e.target.value)}
+                    className="pl-9 bg-white"
+                  />
+                </div>
+              </div>
+              
+              {/* Lista de productos encontrados */}
+              {products.length > 0 && (
+                <div className="border rounded-lg max-h-64 overflow-y-auto">
+                  {products.map((product) => (
+                    <div 
+                      key={product.id}
+                      className="p-3 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => addProductToPOS(product)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium">{product.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            SKU: {product.sku || 'N/A'} | Stock: {product.stock}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold">{formatCurrency(product.price)}</p>
+                          <Badge 
+                            variant={product.canSell ? 'default' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {product.stockStatus === 'sin_stock' ? 'Sin Stock' :
+                             product.stockStatus === 'stock_bajo' ? 'Stock Bajo' : 'Disponible'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Información del cliente */}
+              <div>
+                <Label className="mb-2 block">Cliente</Label>
+                <div className="space-y-2">                  <Select value={posData.customerId} onValueChange={(value) => setPosData(prev => ({ ...prev, customerId: value }))}>
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="Cliente General" />
+                    </SelectTrigger><SelectContent>
+                      <SelectItem value="general">Cliente General</SelectItem>
+                      {customers.map((customer) => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          {customer.name} {customer.email && `(${customer.email})`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowNewCustomerForm(true)}
+                    className="w-full"
+                  >
+                    <IconPlus className="h-4 w-4 mr-2" />
+                    Nuevo Cliente
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Tipo de pago */}
+              <div>
+                <Label className="mb-2 block">Tipo de Pago</Label>                <Select value={posData.paymentType} onValueChange={(value) => setPosData(prev => ({ ...prev, paymentType: value }))}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EFECTIVO">Efectivo</SelectItem>
+                    <SelectItem value="TARJETA_CREDITO">Tarjeta de Crédito</SelectItem>
+                    <SelectItem value="TARJETA_DEBITO">Tarjeta de Débito</SelectItem>
+                    <SelectItem value="TRANSFERENCIA">Transferencia</SelectItem>
+                    <SelectItem value="OTRO">Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+              {/* Panel derecho - Carrito y totales */}
+            <div className="bg-white p-4 rounded-lg space-y-4">
+              <div>
+                <Label className="mb-2 block">Productos en la Venta</Label>
+                <div className="border rounded-lg max-h-96 overflow-y-auto">
+                  {posData.items.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <IconShoppingCart className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>No hay productos agregados</p>
+                    </div>
+                  ) : (
+                    posData.items.map((item, index) => (
+                      <div key={index} className="p-3 border-b last:border-b-0">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="font-medium">{item.productName}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatCurrency(item.priceAtSale)} c/u
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => updateItemQuantity(index, item.quantity - 1)}
+                            >
+                              -
+                            </Button>                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => updateItemQuantity(index, parseInt(e.target.value) || 0)}
+                              className="w-16 text-center bg-white"
+                              min="1"
+                              max={item.maxStock}
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => updateItemQuantity(index, item.quantity + 1)}
+                              disabled={item.quantity >= item.maxStock}
+                            >
+                              +
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => removeItem(index)}
+                            >
+                              <IconX className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center mt-2">
+                          <span className="text-sm text-muted-foreground">
+                            Stock disponible: {item.maxStock}
+                          </span>
+                          <span className="font-semibold">
+                            {formatCurrency(item.priceAtSale * item.quantity)}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              
+              {/* Totales */}
+              <div className="border rounded-lg p-4 bg-muted/50">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(posData.subtotal)}</span>
+                  </div>                  <div className="flex justify-between">
+                    <span>Descuento:</span>
+                    <Input
+                      type="number"
+                      value={posData.discount}
+                      onChange={(e) => {
+                        const discount = parseFloat(e.target.value) || 0
+                        setPosData(prev => ({
+                          ...prev,
+                          discount,
+                          total: Math.max(0, prev.subtotal - discount)
+                        }))
+                      }}
+                      className="w-24 text-right bg-white"
+                      min="0"
+                      max={posData.subtotal}
+                      step="0.01"
+                    />
+                  </div>
+                  <hr />
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total:</span>
+                    <span>{formatCurrency(posData.total)}</span>
+                  </div>
+                </div>
+              </div>
+                {/* Botones de acción */}
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {                    setPosData({
+                      customerId: 'general',
+                      paymentType: 'EFECTIVO',
+                      items: [],
+                      subtotal: 0,
+                      discount: 0,
+                      total: 0
+                    })
+                    setShowPOSModal(false)
+                  }}
+                  className="flex-1 bg-red-500 text-white hover:bg-red-600"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={processSale}
+                  disabled={posData.items.length === 0}
+                  size="sm"
+                  className="flex-1"
+                >
+                  <IconReceipt className="h-4 w-4 mr-2" />
+                  Procesar Venta
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para nuevo cliente */}
+      <Dialog open={showNewCustomerForm} onOpenChange={setShowNewCustomerForm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nuevo Cliente</DialogTitle>
+            <DialogDescription>
+              Crear un nuevo cliente para la venta
+            </DialogDescription>
+          </DialogHeader>
+            <div className="bg-white p-4 rounded-lg space-y-4">
+            <div>
+              <Label className="mb-2 block">Nombre *</Label>
+              <Input
+                value={newCustomer.name}
+                onChange={(e) => setNewCustomer(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Nombre completo"
+                className="bg-white"
+              />
+            </div>
+            
+            <div>
+              <Label className="mb-2 block">Email</Label>
+              <Input
+                type="email"
+                value={newCustomer.email}
+                onChange={(e) => setNewCustomer(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="correo@ejemplo.com"
+                className="bg-white"
+              />
+            </div>
+            
+            <div>
+              <Label className="mb-2 block">Teléfono</Label>
+              <Input
+                value={newCustomer.phone}
+                onChange={(e) => setNewCustomer(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="555-123-4567"
+                className="bg-white"
+              />
+            </div>
+            
+            <div>
+              <Label className="mb-2 block">Dirección</Label>
+              <Input
+                value={newCustomer.address}
+                onChange={(e) => setNewCustomer(prev => ({ ...prev, address: e.target.value }))}
+                placeholder="Dirección completa"
+                className="bg-white"
+              />
+            </div>
+              <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setNewCustomer({ name: '', email: '', phone: '', address: '' })
+                  setShowNewCustomerForm(false)
+                }}
+                className="flex-1 bg-red-500 text-white hover:bg-red-600"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={createNewCustomer}
+                disabled={!newCustomer.name.trim()}
+                size="sm"
+                className="flex-1"
+              >
+                Crear Cliente
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de detalle de venta */}
+      <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalle de Venta</DialogTitle>
+            <DialogDescription>
+              Información completa de la venta
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedSale && (
+            <div className="space-y-6">
+              {/* Información general */}
+              <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">ID de Venta</Label>
+                  <p className="font-mono">{selectedSale.id}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Fecha</Label>
+                  <p>{formatDate(selectedSale.saleDate)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Cliente</Label>
+                  <p>{selectedSale.customer ? selectedSale.customer.name : 'Cliente General'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Vendedor</Label>
+                  <p>{selectedSale.user?.username || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Tipo de Pago</Label>
+                  <Badge>{selectedSale.paymentType || 'EFECTIVO'}</Badge>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Total</Label>
+                  <p className="text-lg font-bold text-green-600">
+                    {formatCurrency(selectedSale.totalAmount)}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Productos vendidos */}
+              <div>
+                <Label className="mb-2 block font-medium">Productos Vendidos</Label>
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Producto</TableHead>
+                        <TableHead>Cantidad</TableHead>
+                        <TableHead>Precio</TableHead>
+                        <TableHead>Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedSale.items?.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{item.product.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                SKU: {item.product.sku || 'N/A'}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>{item.quantity}</TableCell>
+                          <TableCell>{formatCurrency(item.priceAtSale)}</TableCell>
+                          <TableCell className="font-semibold">
+                            {formatCurrency(item.quantity * item.priceAtSale)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+                <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setShowDetailModal(false)}>
+                  Cerrar
+                </Button>
+                <Button onClick={handleDownloadPDF}>
+                  <IconDownload className="h-4 w-4 mr-2" />
+                  Descargar PDF
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
