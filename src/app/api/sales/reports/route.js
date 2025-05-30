@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 const prisma = new PrismaClient()
 
 // GET - Generar reportes de ventas
 export async function GET(request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { searchParams } = new URL(request.url)
     const reportType = searchParams.get('type') || 'summary'
     const fromDate = searchParams.get('fromDate')
@@ -75,16 +81,15 @@ async function generateSummaryReport(where) {
       }
     }),
     // Conteo de ventas
-    prisma.sale.count({ where }),
-    // Revenue total
+    prisma.sale.count({ where }),    // Revenue total
     prisma.sale.aggregate({
       where,
-      _sum: { total: true }
+      _sum: { totalAmount: true }
     }),
     // Promedio por venta
     prisma.sale.aggregate({
       where,
-      _avg: { total: true }
+      _avg: { totalAmount: true }
     })
   ])
 
@@ -92,12 +97,11 @@ async function generateSummaryReport(where) {
   const totalProducts = sales.reduce((sum, sale) => 
     sum + sale.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0
   )
-
   return {
     summary: {
       totalSales: salesCount,
-      totalRevenue: totalRevenue._sum.total || 0,
-      averageTicket: averageTicket._avg.total || 0,
+      totalRevenue: totalRevenue._sum.totalAmount || 0,
+      averageTicket: averageTicket._avg.totalAmount || 0,
       totalProductsSold: totalProducts
     },
     sales
@@ -133,9 +137,8 @@ async function generateProductsReport(where) {
           sales: 0
         }
       }
-      
-      productStats[productId].quantitySold += item.quantity
-      productStats[productId].totalRevenue += item.total
+        productStats[productId].quantitySold += item.quantity
+      productStats[productId].totalRevenue += (item.quantity * item.priceAtSale)
       productStats[productId].sales += 1
     })
   })
@@ -170,9 +173,8 @@ async function generateCustomersReport(where) {
         averageTicket: 0
       }
     }
-    
-    customerStats[customerId].salesCount += 1
-    customerStats[customerId].totalSpent += sale.total
+      customerStats[customerId].salesCount += 1
+    customerStats[customerId].totalSpent += sale.totalAmount
   })
 
   // Calcular promedio

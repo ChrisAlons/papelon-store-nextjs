@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-// import { getServerSession } from 'next-auth/next';
-// import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function GET(req, { params }) {
-  // const session = await getServerSession(authOptions);
-  // if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
   const product = await prisma.product.findUnique({ where: { id }, include: { category: true } });
   if (!product) return NextResponse.json({ error: 'Not Found' }, { status: 404 });
@@ -13,8 +13,8 @@ export async function GET(req, { params }) {
 }
 
 export async function PUT(req, { params }) {
-  // const session = await getServerSession(authOptions);
-  // if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
   const data = await req.json();
   const product = await prisma.product.update({ where: { id }, data });
@@ -22,8 +22,8 @@ export async function PUT(req, { params }) {
 }
 
 export async function DELETE(req, { params }) {
-  // const session = await getServerSession(authOptions);
-  // if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   
   const { id } = await params;
   

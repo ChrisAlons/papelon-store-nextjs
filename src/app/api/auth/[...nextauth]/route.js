@@ -58,16 +58,20 @@ export const authOptions = {
         session.user.email = token.email ?? token.username;
       }
       return session;
-    },
-  },
+    },  },
   pages: {
-    signIn: '/login', // Corregido a nuestra página de login personalizada
-    // error: '/auth/error', // Puedes definir una página de error personalizada si lo deseas
+    signIn: '/login', // Página de login personalizada
+    signOut: '/login', // Redirect to login after sign out
+    error: '/login', // Error pages redirect to login
   },
   session: {
-    strategy: 'jwt', // Especificar la estrategia de sesión como JWT
+    strategy: 'jwt', // Usar JWT para sesiones
+    maxAge: 24 * 60 * 60, // 24 horas
   },
-  secret: process.env.NEXTAUTH_SECRET, // Asegúrate de que esta variable de entorno esté configurada
+  jwt: {
+    maxAge: 24 * 60 * 60, // 24 horas para JWT
+  },
+  secret: process.env.NEXTAUTH_SECRET, // Secret para firmar JWT
 }; // Corregido: Terminar el objeto authOptions con };
 
 const handler = NextAuth(authOptions);

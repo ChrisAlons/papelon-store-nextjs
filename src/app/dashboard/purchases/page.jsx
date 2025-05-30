@@ -369,24 +369,23 @@ export default function PurchasesPage() {
                 <IconPlus className="h-4 w-4 mr-2" />
                 Nueva Compra
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Nueva Compra</DialogTitle>
-                <DialogDescription>
-                  Registra una nueva compra a proveedor
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="bg-white p-4 rounded-lg space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            </DialogTrigger>            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+              <div>
+                <DialogHeader>
+                  <DialogTitle>Nueva Compra</DialogTitle>
+                  <DialogDescription>
+                    Registra una nueva compra a proveedor
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="bg-white p-4 rounded-lg space-y-4">
                     <div>
                       <Label htmlFor="supplier" className="mb-2 block">Proveedor *</Label>
                       <Select value={formData.supplierId} onValueChange={(value) => setFormData({...formData, supplierId: value})}>
                         <SelectTrigger className="bg-white">
                           <SelectValue placeholder="Selecciona un proveedor" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white">
                           {suppliers.map((supplier) => (
                             <SelectItem key={supplier.id} value={supplier.id}>
                               {supplier.name}
@@ -395,6 +394,7 @@ export default function PurchasesPage() {
                         </SelectContent>
                       </Select>
                     </div>
+                    
                     <div>
                       <Label htmlFor="invoiceNumber" className="mb-2 block">Número de Factura</Label>
                       <Input
@@ -405,192 +405,189 @@ export default function PurchasesPage() {
                         className="bg-white"
                       />
                     </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="notes" className="mb-2 block">Notas</Label>
-                    <Input
-                      id="notes"
-                      value={formData.notes}
-                      onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                      placeholder="Notas adicionales"
-                      className="bg-white"
-                    />
-                  </div>
-                </div>
+                    
+                    <div>
+                      <Label htmlFor="notes" className="mb-2 block">Notas</Label>
+                      <Input
+                        id="notes"
+                        value={formData.notes}
+                        onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                        placeholder="Notas adicionales"
+                        className="bg-white"
+                      />
+                    </div>
 
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <Label>Productos *</Label>
-                    <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                      <IconPlus className="h-4 w-4 mr-1" />
-                      Agregar Producto
-                    </Button>
-                  </div>
-                    <div className="space-y-4">
-                    {formData.items.map((item, index) => (
-                      <div key={index} className="border rounded-lg p-4 space-y-3">
-                        <div>
-                          <Label className="mb-2 block">Producto</Label>
-                          <Select 
-                            value={item.productId} 
-                            onValueChange={(value) => updateItem(index, 'productId', value)}
-                          >
-                            <SelectTrigger className="w-full bg-white">
-                              <SelectValue placeholder="Seleccionar producto" />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-48">
-                              {products.map((product) => (
-                                <SelectItem key={product.id} value={product.id}>
-                                  <div className="flex flex-col w-full">
-                                    <span className="font-medium">{product.name}</span>
-                                    <span className="text-sm text-muted-foreground">SKU: {product.sku}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div className="grid grid-cols-5 gap-2">
-                          <div>
-                            <Label className="mb-2 block">Cantidad</Label>
-                            <Input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                              min="1"
-                              placeholder="0"
-                              className="bg-white"
-                            />
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <Label>Productos *</Label>
+                        <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                          <IconPlus className="h-4 w-4 mr-1" />
+                          Agregar
+                        </Button>
+                      </div>
+                      <div className="space-y-4">
+                        {formData.items.map((item, index) => (
+                          <div key={index} className="border rounded-lg p-3 space-y-2">
+                            <div>
+                              <Label className="mb-1 block text-sm">Producto</Label>
+                              <Select 
+                                value={item.productId} 
+                                onValueChange={(value) => updateItem(index, 'productId', value)}
+                              >
+                                <SelectTrigger className="w-full bg-white">
+                                  <SelectValue placeholder="Seleccionar producto" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white max-h-48">
+                                  {products.map((product) => (
+                                    <SelectItem key={product.id} value={product.id}>
+                                      {product.name} - {product.sku}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            <div className="grid grid-cols-4 gap-2">
+                              <div>
+                                <Label className="mb-1 block text-sm">Cantidad</Label>
+                                <Input
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
+                                  min="1"
+                                  placeholder="0"
+                                  className="bg-white"
+                                />
+                              </div>
+                              <div>
+                                <Label className="mb-1 block text-sm">Costo</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={item.costAtPurchase}
+                                  onChange={(e) => updateItem(index, 'costAtPurchase', parseFloat(e.target.value) || 0)}
+                                  min="0"
+                                  placeholder="0.00"
+                                  className="bg-white"
+                                />
+                              </div>
+                              <div>
+                                <Label className="mb-1 block text-sm">Subtotal</Label>
+                                <Input
+                                  type="text"
+                                  value={`$${(item.quantity * item.costAtPurchase).toFixed(2)}`}
+                                  disabled
+                                  className="bg-white"
+                                />
+                              </div>
+                              <div className="flex items-end">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => removeItem(index)}
+                                  disabled={formData.items.length === 1}
+                                >
+                                  <IconMinus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <Label className="mb-2 block">Costo</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={item.costAtPurchase}
-                              onChange={(e) => updateItem(index, 'costAtPurchase', parseFloat(e.target.value) || 0)}
-                              min="0"
-                              placeholder="0.00"
-                              className="bg-white"
-                            />
-                          </div>
-                          <div>
-                            <Label className="mb-2 block">Subtotal</Label>
-                            <Input
-                              type="text"
-                              value={`$${(item.quantity * item.costAtPurchase).toFixed(2)}`}
-                              disabled
-                              className="bg-white"
-                            />
-                          </div>
-                          <div className="flex items-end">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => removeItem(index)}
-                              disabled={formData.items.length === 1}
-                            >
-                              <IconMinus className="h-4 w-4" />
-                            </Button>
-                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex justify-end mt-4">
+                        <div className="text-lg font-semibold">
+                          Total: ${getTotalAmount()}
                         </div>
                       </div>
-                    ))}
-                  </div>
-
-                  <div className="flex justify-end mt-4">
-                    <div className="text-lg font-semibold">
-                      Total: ${getTotalAmount()}
                     </div>
                   </div>
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" size="sm" onClick={resetForm} className="bg-red-500 text-white hover:bg-red-600">
-                    Cancelar
-                  </Button>
-                  <Button type="submit" size="sm">
-                    Crear Compra
-                  </Button>
-                </div>
-              </form>
+                  
+                  <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="outline" size="sm" onClick={resetForm} className="bg-red-500 text-white hover:bg-red-600">
+                      Cancelar
+                    </Button>
+                    <Button type="submit" size="sm">
+                      Crear
+                    </Button>
+                  </div>
+                </form>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
       {/* View Purchase Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detalles de Compra</DialogTitle>
-            <DialogDescription>
-              Información completa de la compra
-            </DialogDescription>
-          </DialogHeader>
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <div>
-            {viewingPurchase && (
-              <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Fecha de Compra</Label>
-                    <p className="text-sm">{formatDate(viewingPurchase.purchaseDate)}</p>
+            <DialogHeader>
+              <DialogTitle>Detalles de Compra</DialogTitle>
+              <DialogDescription>
+                Información completa de la compra
+              </DialogDescription>
+            </DialogHeader>
+            <div>
+              {viewingPurchase && (
+                <div className="bg-white p-4 rounded-lg space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="mb-2 block">Fecha de Compra</Label>
+                      <p className="text-sm bg-white p-2 border rounded">{formatDate(viewingPurchase.purchaseDate)}</p>
+                    </div>
+                    <div>
+                      <Label className="mb-2 block">Proveedor</Label>
+                      <p className="text-sm bg-white p-2 border rounded">{viewingPurchase.supplier?.name}</p>
+                    </div>
+                    <div>
+                      <Label className="mb-2 block">Número de Factura</Label>
+                      <p className="text-sm bg-white p-2 border rounded">{viewingPurchase.invoiceNumber || 'No especificado'}</p>
+                    </div>
+                    <div>
+                      <Label className="mb-2 block">Total</Label>
+                      <p className="text-lg font-semibold bg-white p-2 border rounded">${viewingPurchase.totalAmount?.toFixed(2)}</p>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Proveedor</Label>
-                    <p className="text-sm">{viewingPurchase.supplier?.name}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Número de Factura</Label>
-                    <p className="text-sm">{viewingPurchase.invoiceNumber || 'No especificado'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Total</Label>
-                    <p className="text-lg font-semibold">${viewingPurchase.totalAmount?.toFixed(2)}</p>
-                  </div>                {viewingPurchase.notes && (
-                    <div className="col-span-full">
-                      <Label className="text-sm font-medium text-muted-foreground">Notas</Label>
-                      <p className="text-sm">{viewingPurchase.notes}</p>
+
+                  {viewingPurchase.notes && (
+                    <div>
+                      <Label className="mb-2 block">Notas</Label>
+                      <p className="text-sm bg-white p-2 border rounded">{viewingPurchase.notes}</p>
                     </div>
                   )}
-                </div>
 
-                <div>
-                  <h3 className="text-lg font-medium mb-3">Productos Comprados</h3>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Producto</TableHead>
-                        <TableHead>Cantidad</TableHead>
-                        <TableHead>Costo Unitario</TableHead>
-                        <TableHead>Subtotal</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  <div>
+                    <Label className="mb-2 block">Productos Comprados</Label>
+                    <div className="space-y-2">
                       {viewingPurchase.items?.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">
-                            {item.product?.name || `Producto ID: ${item.productId}`}
-                          </TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell>${item.costAtPurchase?.toFixed(2)}</TableCell>
-                          <TableCell>${(item.quantity * item.costAtPurchase).toFixed(2)}</TableCell>
-                        </TableRow>
+                        <div key={index} className="bg-white border rounded p-3">
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">{item.product?.name || `Producto ID: ${item.productId}`}</span>
+                            <span className="text-sm font-bold">${(item.quantity * item.costAtPurchase).toFixed(2)}</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Cantidad: {item.quantity} × ${item.costAtPurchase?.toFixed(2)}
+                          </div>
+                        </div>
                       ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                    </div>
+                  </div>
 
-                <div className="border-t pt-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-medium">Total de la Compra:</span>
-                    <span className="text-xl font-bold">${viewingPurchase.totalAmount?.toFixed(2)}</span>
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-medium">Total de la Compra:</span>
+                      <span className="text-xl font-bold">${viewingPurchase.totalAmount?.toFixed(2)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+            <div className="flex justify-end space-x-2 mt-4">
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsViewDialogOpen(false)} className="bg-red-500 text-white hover:bg-red-600">
+                Cerrar
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

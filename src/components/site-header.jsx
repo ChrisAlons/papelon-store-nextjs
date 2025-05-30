@@ -3,8 +3,11 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useState, useEffect } from "react"
+import { useSession, signOut } from "next-auth/react"
+import { IconLogout, IconUser } from "@tabler/icons-react"
 
 export function SiteHeader() {
+  const { data: session } = useSession()
   const [primary, setPrimary] = useState("#6366f1");
   const [background, setBackground] = useState("#ffffff");
 
@@ -33,9 +36,15 @@ export function SiteHeader() {
     document.documentElement.style.setProperty('--primary', e.target.value);
   };
 
-  const handleBackgroundChange = (e) => {
-    setBackground(e.target.value);
+  const handleBackgroundChange = (e) => {    setBackground(e.target.value);
     document.documentElement.style.setProperty('--background', e.target.value);
+  };
+
+  const handleSignOut = async () => {
+    await signOut({ 
+      callbackUrl: '/login',
+      redirect: true 
+    })
   };
 
   return (
@@ -43,7 +52,23 @@ export function SiteHeader() {
       className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
+        
+        {/* User info and logout */}
         <div className="ml-auto flex items-center gap-2">
+          {session && (
+            <>
+              <div className="flex items-center gap-2 text-sm">
+                <IconUser className="h-4 w-4" />
+                <span className="hidden sm:inline font-medium">{session.user.name}</span>
+                <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                  {session.user.role}
+                </span>
+              </div>
+              <Separator orientation="vertical" className="h-6" />
+            </>
+          )}
+          
+          {/* Theme controls */}
           <label className="flex items-center gap-1 text-xs">
             <span className="hidden sm:inline">Color</span>
             <input
@@ -66,6 +91,21 @@ export function SiteHeader() {
               style={{marginRight: 8}}
             />
           </label>
+          
+          {session && (
+            <>
+              <Separator orientation="vertical" className="h-6" />
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleSignOut}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <IconLogout className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Cerrar Sesión</span>
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </header>

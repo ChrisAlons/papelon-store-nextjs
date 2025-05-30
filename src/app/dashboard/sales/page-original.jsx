@@ -1,5 +1,4 @@
 "use client"
-// Sales page - runtime error resolved
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { ActionButton } from '@/components/ui/action-button'
@@ -81,7 +80,6 @@ export default function SalesPage() {
       setLoading(false)
     }
   }, [searchTerm, filters])
-
   const fetchStats = useCallback(async () => {
     try {
       const response = await fetch('/api/sales/stats?period=today')
@@ -122,10 +120,9 @@ export default function SalesPage() {
     } catch (error) {
       console.error('Error:', error)
       toast.error('Error al buscar productos')
-    }  }
-
-  // Funciones de ordenamiento
-  const handleSort = (key) => {
+    }
+  }
+  // Funciones de ordenamiento  const handleSort = (key) => {
     let direction = 'asc'
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc'
@@ -249,8 +246,11 @@ export default function SalesPage() {
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Error al procesar la venta')
-      }      const sale = await response.json()
+      }
+      const sale = await response.json()
       toast.success('Venta procesada exitosamente')
+      // Generar PDF automáticamente
+      generateReceiptPDF(sale)
       // Resetear POS
       setPosData({
         customerId: 'general',
@@ -866,7 +866,8 @@ export default function SalesPage() {
             </div>
           </div>
         </DialogContent>
-      </Dialog>      {/* Modal de detalle de venta */}
+      </Dialog>
+      {/* Modal de detalle de venta */}
       <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -876,28 +877,28 @@ export default function SalesPage() {
             </DialogDescription>
           </DialogHeader>
           {selectedSale && (
-            <div className="bg-white p-4 rounded-lg space-y-4">
+            <div className="space-y-6">
               {/* Información general */}
-              <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-gray-50">
+              <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">ID de Venta</Label>
-                  <p className="font-mono text-sm">{selectedSale.id}</p>
+                  <p className="font-mono">{selectedSale.id}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Fecha</Label>
-                  <p className="text-sm">{formatDate(selectedSale.saleDate)}</p>
+                  <p>{formatDate(selectedSale.saleDate)}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Cliente</Label>
-                  <p className="text-sm">{selectedSale.customer ? selectedSale.customer.name : 'Cliente General'}</p>
+                  <p>{selectedSale.customer ? selectedSale.customer.name : 'Cliente General'}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Vendedor</Label>
-                  <p className="text-sm">{selectedSale.user?.username || 'N/A'}</p>
+                  <p>{selectedSale.user?.username || 'N/A'}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Tipo de Pago</Label>
-                  <Badge variant="outline">{selectedSale.paymentType || 'EFECTIVO'}</Badge>
+                  <Badge>{selectedSale.paymentType || 'EFECTIVO'}</Badge>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Total</Label>
@@ -906,18 +907,17 @@ export default function SalesPage() {
                   </p>
                 </div>
               </div>
-
               {/* Productos vendidos */}
               <div>
-                <Label className="mb-3 block font-medium">Productos Vendidos</Label>
-                <div className="border rounded-lg bg-white">
+                <Label className="mb-2 block font-medium">Productos Vendidos</Label>
+                <div className="border rounded-lg">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Producto</TableHead>
-                        <TableHead className="text-center">Cantidad</TableHead>
-                        <TableHead className="text-right">Precio</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead>Cantidad</TableHead>
+                        <TableHead>Precio</TableHead>
+                        <TableHead>Total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -925,15 +925,15 @@ export default function SalesPage() {
                         <TableRow key={item.id}>
                           <TableCell>
                             <div>
-                              <p className="font-medium text-sm">{item.product.name}</p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="font-medium">{item.product.name}</p>
+                              <p className="text-sm text-muted-foreground">
                                 SKU: {item.product.sku || 'N/A'}
                               </p>
                             </div>
                           </TableCell>
-                          <TableCell className="text-center">{item.quantity}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(item.priceAtSale)}</TableCell>
-                          <TableCell className="text-right font-semibold">
+                          <TableCell>{item.quantity}</TableCell>
+                          <TableCell>{formatCurrency(item.priceAtSale)}</TableCell>
+                          <TableCell className="font-semibold">
                             {formatCurrency(item.quantity * item.priceAtSale)}
                           </TableCell>
                         </TableRow>
@@ -942,29 +942,18 @@ export default function SalesPage() {
                   </Table>
                 </div>
               </div>
-
-              {/* Botones de acción */}
-              <div className="flex justify-end space-x-2 pt-4 border-t">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowDetailModal(false)}
-                >
-                  <IconX className="h-4 w-4 mr-2" />
+                <div className="flex justify-end space-x-2">                <Button variant="outline" onClick={() => setShowDetailModal(false)}>
                   Cerrar
                 </Button>
-                <Button 
-                  size="sm"
-                  onClick={handleDownloadPDF}
-                >
+                <Button onClick={handleDownloadPDF}>
                   <IconDownload className="h-4 w-4 mr-2" />
                   Descargar PDF
                 </Button>
               </div>
             </div>
           )}
-        </DialogContent></Dialog>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-

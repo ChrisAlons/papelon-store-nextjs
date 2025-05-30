@@ -75,7 +75,6 @@ export const generateReceiptPDF = (sale) => {
   // Línea separadora
   pdf.line(margin, yPosition, pageWidth - margin, yPosition)
   yPosition += 8
-
   // Items de la venta
   pdf.setFont("helvetica", "normal")
   sale.items?.forEach((item) => {
@@ -92,11 +91,17 @@ export const generateReceiptPDF = (sale) => {
       ? productName.substring(0, maxProductNameLength) + "..."
       : productName
 
+    // Usar valores seguros con fallbacks
+    const quantity = item.quantity || 0
+    const unitPrice = item.priceAtSale || 0
+    const discount = item.discount || 0
+    const total = quantity * unitPrice
+
     pdf.text(displayName, margin, yPosition)
-    pdf.text(item.quantity.toString(), margin + 100, yPosition, { align: "right" })
-    pdf.text(`$${item.unitPrice.toFixed(2)}`, margin + 130, yPosition, { align: "right" })
-    pdf.text(`${item.discount}%`, margin + 160, yPosition, { align: "right" })
-    pdf.text(`$${item.total.toFixed(2)}`, pageWidth - margin, yPosition, { align: "right" })
+    pdf.text(quantity.toString(), margin + 100, yPosition, { align: "right" })
+    pdf.text(`$${unitPrice.toFixed(2)}`, margin + 130, yPosition, { align: "right" })
+    pdf.text(`${discount}%`, margin + 160, yPosition, { align: "right" })
+    pdf.text(`$${total.toFixed(2)}`, pageWidth - margin, yPosition, { align: "right" })
     yPosition += 8
   })
 
@@ -105,25 +110,29 @@ export const generateReceiptPDF = (sale) => {
   // Línea separadora
   pdf.line(margin, yPosition, pageWidth - margin, yPosition)
   yPosition += 10
-
   // Totales
   pdf.setFont("helvetica", "bold")
   
-  if (sale.subtotal !== sale.total) {
+  // Calcular subtotal si no existe
+  const subtotal = sale.subtotal || sale.totalAmount || 0
+  const discountAmount = sale.discountAmount || 0
+  const total = sale.totalAmount || sale.total || 0
+  
+  if (subtotal !== total && discountAmount > 0) {
     pdf.text("Subtotal:", margin + 120, yPosition)
-    pdf.text(`$${sale.subtotal.toFixed(2)}`, pageWidth - margin, yPosition, { align: "right" })
+    pdf.text(`$${subtotal.toFixed(2)}`, pageWidth - margin, yPosition, { align: "right" })
     yPosition += 8
   }
 
-  if (sale.discountAmount > 0) {
+  if (discountAmount > 0) {
     pdf.text("Descuento Total:", margin + 120, yPosition)
-    pdf.text(`-$${sale.discountAmount.toFixed(2)}`, pageWidth - margin, yPosition, { align: "right" })
+    pdf.text(`-$${discountAmount.toFixed(2)}`, pageWidth - margin, yPosition, { align: "right" })
     yPosition += 8
   }
 
   pdf.setFontSize(12)
   pdf.text("TOTAL:", margin + 120, yPosition)
-  pdf.text(`$${sale.total.toFixed(2)}`, pageWidth - margin, yPosition, { align: "right" })
+  pdf.text(`$${total.toFixed(2)}`, pageWidth - margin, yPosition, { align: "right" })
   yPosition += 15
 
   // Pie de página

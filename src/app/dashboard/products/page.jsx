@@ -162,27 +162,24 @@ export default function ProductsPage() {
     })
     setOpenDrawer(true)
   }
-
   const toggleProductStatus = async (product) => {
     try {
+      // Update product status (isActive toggle)
+      const res = await fetch(`/api/products/${product.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          isActive: !product.isActive
+        })
+      })
+      
+      if (!res.ok) throw new Error('Error updating product status')
+      
       if (product.isActive) {
-        // Deactivate product
-        const res = await fetch(`/api/products/${product.id}`, {
-          method: 'DELETE'
-        })
-        const result = await res.json()
-        
-        if (result.deactivated) {
-          toast.success('Producto desactivado (tiene historial de transacciones)')
-        } else {
-          toast.success('Producto eliminado')
-        }
+        toast.success('Producto desactivado')
       } else {
-        // Reactivate product
-        const res = await fetch(`/api/products/${product.id}/reactivate`, {
-          method: 'PUT'
-        })
-        if (!res.ok) throw new Error('Error reactivating product')
         toast.success('Producto reactivado')
       }
       
@@ -537,102 +534,81 @@ export default function ProductsPage() {
         </CardContent>
       </Card>      {/* Modal para crear/editar producto */}
       <Dialog open={openDrawer} onOpenChange={setOpenDrawer}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl">
-              {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingProduct ? 
-                'Modifica los datos del producto en el formulario.' : 
-                'Completa la información del nuevo producto.'
-              }
-            </DialogDescription>
-          </DialogHeader>
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 gap-6">
-              {/* Información básica */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium border-b pb-2">Información Básica</h3>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="sm:col-span-2">
-                    <Label htmlFor="name" className="text-sm font-medium">
-                      Nombre del Producto *
-                    </Label>
-                    <Input 
-                      id="name" 
-                      name="name" 
-                      value={formData.name} 
-                      onChange={handleChange} 
-                      required 
-                      className="mt-1"
-                      placeholder="Ej: Cuaderno A4"
-                    />
-                  </div>
-                  
-                  <div className="sm:col-span-2">
-                    <Label htmlFor="description" className="text-sm font-medium">
-                      Descripción
-                    </Label>
-                    <Input 
-                      id="description" 
-                      name="description" 
-                      value={formData.description} 
-                      onChange={handleChange} 
-                      className="mt-1"
-                      placeholder="Descripción opcional del producto"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="sku" className="text-sm font-medium">
-                      SKU / Código
-                    </Label>
-                    <Input 
-                      id="sku" 
-                      name="sku" 
-                      value={formData.sku} 
-                      onChange={handleChange} 
-                      className="mt-1"
-                      placeholder="Código único"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="category" className="text-sm font-medium">
-                      Categoría
-                    </Label>
-                    <Select 
-                      name="categoryId" 
-                      value={formData.categoryId} 
-                      onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val }))}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Seleccione categoría" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map(cat => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+        <DialogContent className="sm:max-w-[425px]">
+          <div>
+            <DialogHeader>
+              <DialogTitle>
+                {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
+              </DialogTitle>
+              <DialogDescription>
+                {editingProduct ? 
+                  'Modifica los datos del producto' : 
+                  'Agrega un nuevo producto al inventario'
+                }
+              </DialogDescription>
+            </DialogHeader>            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="bg-white p-4 rounded-lg space-y-4">
+                <div>
+                  <Label htmlFor="name" className="mb-2 block">Nombre del Producto *</Label>
+                  <Input 
+                    id="name" 
+                    name="name" 
+                    value={formData.name} 
+                    onChange={handleChange} 
+                    required 
+                    placeholder="Ej: Cuaderno A4"
+                    className="bg-white"
+                  />
                 </div>
-              </div>
-              
-              {/* Precios y stock */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium border-b pb-2">Precios y Stock</h3>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="description" className="mb-2 block">Descripción</Label>
+                  <Input 
+                    id="description" 
+                    name="description" 
+                    value={formData.description} 
+                    onChange={handleChange} 
+                    placeholder="Descripción del producto"
+                    className="bg-white"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="sku" className="mb-2 block">SKU / Código</Label>
+                  <Input 
+                    id="sku" 
+                    name="sku" 
+                    value={formData.sku} 
+                    onChange={handleChange} 
+                    placeholder="Código único"
+                    className="bg-white"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="category" className="mb-2 block">Categoría</Label>
+                  <Select 
+                    name="categoryId" 
+                    value={formData.categoryId} 
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, categoryId: val }))}
+                  >
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="Seleccione categoría" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      {categories.map(cat => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="cost" className="text-sm font-medium">
-                      Costo *
-                    </Label>
+                    <Label htmlFor="cost" className="mb-2 block">Costo *</Label>
                     <Input 
                       id="cost" 
                       name="cost" 
@@ -641,15 +617,13 @@ export default function ProductsPage() {
                       value={formData.cost} 
                       onChange={handleChange} 
                       required 
-                      className="mt-1"
                       placeholder="0.00"
+                      className="bg-white"
                     />
                   </div>
                   
                   <div>
-                    <Label htmlFor="price" className="text-sm font-medium">
-                      Precio de Venta *
-                    </Label>
+                    <Label htmlFor="price" className="mb-2 block">Precio de Venta *</Label>
                     <Input 
                       id="price" 
                       name="price" 
@@ -658,55 +632,36 @@ export default function ProductsPage() {
                       value={formData.price} 
                       onChange={handleChange} 
                       required 
-                      className="mt-1"
                       placeholder="0.00"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="stock" className="text-sm font-medium">
-                      Stock Inicial *
-                    </Label>
-                    <Input 
-                      id="stock" 
-                      name="stock" 
-                      type="number" 
-                      value={formData.stock} 
-                      onChange={handleChange} 
-                      required 
-                      className="mt-1"
-                      placeholder="0"
+                      className="bg-white"
                     />
                   </div>
                 </div>
                 
-                {/* Indicador de margen de ganancia */}
-                {formData.price && formData.cost && (
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      Margen de ganancia: 
-                      <span className="font-medium text-foreground ml-1">
-                        {(((parseFloat(formData.price) - parseFloat(formData.cost)) / parseFloat(formData.price)) * 100).toFixed(1)}%
-                      </span>
-                    </p>
-                  </div>
-                )}
+                <div>
+                  <Label htmlFor="stock" className="mb-2 block">Stock Inicial *</Label>
+                  <Input 
+                    id="stock" 
+                    name="stock" 
+                    type="number" 
+                    value={formData.stock} 
+                    onChange={handleChange} 
+                    required 
+                    placeholder="0"
+                    className="bg-white"
+                  />
+                </div>
+              </div>              
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setOpenDrawer(false)} className="bg-red-500 text-white hover:bg-red-600">
+                  Cancelar
+                </Button>
+                <Button type="submit" size="sm">
+                  {editingProduct ? 'Actualizar' : 'Crear'}
+                </Button>
               </div>
-            </div>
-            
-            <DialogFooter className="gap-2 pt-4">
-              <Button 
-                variant="outline" 
-                type="button" 
-                onClick={() => setOpenDrawer(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit">
-                {editingProduct ? 'Actualizar Producto' : 'Crear Producto'}
-              </Button>
-            </DialogFooter>
-          </form>
+            </form>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

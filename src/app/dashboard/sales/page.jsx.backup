@@ -1,5 +1,5 @@
 "use client"
-// Sales page - runtime error resolved
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { ActionButton } from '@/components/ui/action-button'
@@ -28,6 +28,7 @@ import {
   IconFilter,
   IconX
 } from '@tabler/icons-react'
+
 export default function SalesPage() {
   const [sales, setSales] = useState([])
   const [stats, setStats] = useState(null)
@@ -42,6 +43,7 @@ export default function SalesPage() {
     dateTo: '',
     userId: '',
     paymentType: 'all'  })
+
   // Estados para el POS
   const [posData, setPosData] = useState({
     customerId: 'general',
@@ -60,18 +62,22 @@ export default function SalesPage() {
     email: '',
     phone: '',    address: ''
   })
+
   const fetchSales = useCallback(async () => {
     try {
       setLoading(true)      // Filtrar parámetros vacíos y valores "all"
       const cleanFilters = Object.fromEntries(
         Object.entries(filters).filter(([key, value]) => value && value !== 'all')
       )
+      
       const queryParams = new URLSearchParams({
         search: searchTerm,
         ...cleanFilters
       }).toString()
+      
       const response = await fetch(`/api/sales?${queryParams}`)
       if (!response.ok) throw new Error('Error al cargar ventas')
+      
       const data = await response.json()
       setSales(data.sales || [])
     } catch (error) {
@@ -81,11 +87,11 @@ export default function SalesPage() {
       setLoading(false)
     }
   }, [searchTerm, filters])
-
   const fetchStats = useCallback(async () => {
     try {
       const response = await fetch('/api/sales/stats?period=today')
       if (!response.ok) throw new Error('Error al cargar estadísticas')
+      
       const data = await response.json()
       setStats(data)
     } catch (error) {
@@ -97,68 +103,82 @@ export default function SalesPage() {
     try {
       const response = await fetch('/api/customers')
       if (!response.ok) throw new Error('Error al cargar clientes')
+      
       const data = await response.json()
       setCustomers(data)
     } catch (error) {
       console.error('Error:', error)
       toast.error('Error al cargar clientes')
     }  }, [])
+
   // Cargar datos iniciales
   useEffect(() => {
     fetchSales()
     fetchStats()
     fetchCustomers()
   }, [fetchSales, fetchStats, fetchCustomers])
+
   const searchProducts = async (query) => {
     if (!query.trim()) {
       setProducts([])
       return
     }
+    
     try {
       const response = await fetch(`/api/sales/products?search=${encodeURIComponent(query)}&limit=10`)
       if (!response.ok) throw new Error('Error al buscar productos')
+      
       const data = await response.json()
       setProducts(data)
     } catch (error) {
       console.error('Error:', error)
       toast.error('Error al buscar productos')
-    }  }
+    }
+  }
 
-  // Funciones de ordenamiento
-  const handleSort = (key) => {
+  // Funciones de ordenamiento  const handleSort = (key) => {
     let direction = 'asc'
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc'
     }
     setSortConfig({ key, direction })
   }
+
   const getNestedValue = (obj, path) => {
     return path.split('.').reduce((current, key) => current?.[key], obj)
   }
+
   const sortedSales = useMemo(() => {
     if (!sortConfig.key) return sales
+    
     return [...sales].sort((a, b) => {
       const aValue = getNestedValue(a, sortConfig.key)
       const bValue = getNestedValue(b, sortConfig.key)
+      
       if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
       if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
       return 0
     })
   }, [sales, sortConfig])
+
   // Funciones para el POS
   const addProductToPOS = (product) => {
     if (!product.canSell) {
       toast.error(`${product.name} no está disponible para venta`)
       return
     }
+
     const existingItemIndex = posData.items.findIndex(item => item.productId === product.id)
+    
     if (existingItemIndex >= 0) {
       const newItems = [...posData.items]
       const currentQuantity = newItems[existingItemIndex].quantity
+      
       if (currentQuantity >= product.stock) {
         toast.error(`Stock insuficiente para ${product.name}`)
         return
       }
+      
       newItems[existingItemIndex].quantity += 1
       updatePOSItems(newItems)
     } else {
@@ -172,12 +192,15 @@ export default function SalesPage() {
       }
       updatePOSItems([...posData.items, newItem])
     }
+    
     setSearchProduct('')
     setProducts([])
   }
+
   const updatePOSItems = (items) => {
     const subtotal = items.reduce((sum, item) => sum + (item.priceAtSale * item.quantity), 0)
     const total = subtotal - posData.discount
+    
     setPosData(prev => ({
       ...prev,
       items,
@@ -185,24 +208,29 @@ export default function SalesPage() {
       total: Math.max(0, total)
     }))
   }
+
   const updateItemQuantity = (index, quantity) => {
     if (quantity <= 0) {
       removeItem(index)
       return
     }
+    
     const item = posData.items[index]
     if (quantity > item.maxStock) {
       toast.error(`Stock insuficiente. Máximo: ${item.maxStock}`)
       return
     }
+    
     const newItems = [...posData.items]
     newItems[index].quantity = quantity
     updatePOSItems(newItems)
   }
+
   const removeItem = (index) => {
     const newItems = posData.items.filter((_, i) => i !== index)
     updatePOSItems(newItems)
   }
+
   const createNewCustomer = async () => {
     try {
       const response = await fetch('/api/customers', {
@@ -210,10 +238,12 @@ export default function SalesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newCustomer)
       })
+      
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Error al crear cliente')
       }
+      
       const customer = await response.json()
       setCustomers(prev => [...prev, customer])
       setPosData(prev => ({ ...prev, customerId: customer.id }))
@@ -224,11 +254,13 @@ export default function SalesPage() {
       toast.error(error.message)
     }
   }
+
   const processSale = async () => {
     if (posData.items.length === 0) {
       toast.error('Agregue al menos un producto')
       return
     }
+    
     try {
       const saleData = {
         customerId: posData.customerId === 'general' ? null : posData.customerId,
@@ -241,16 +273,24 @@ export default function SalesPage() {
           priceAtSale: item.priceAtSale
         }))
       }
+      
       const response = await fetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(saleData)
       })
+      
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Error al procesar la venta')
-      }      const sale = await response.json()
+      }
+      
+      const sale = await response.json()
       toast.success('Venta procesada exitosamente')
+      
+      // Generar PDF automáticamente
+      generateReceiptPDF(sale)
+      
       // Resetear POS
       setPosData({
         customerId: 'general',
@@ -261,9 +301,11 @@ export default function SalesPage() {
         total: 0
       })
       setShowPOSModal(false)
+      
       // Actualizar listas
       fetchSales()
       fetchStats()
+      
       // Mostrar detalle de la venta
       viewSaleDetail(sale.id)
     } catch (error) {
@@ -271,10 +313,12 @@ export default function SalesPage() {
       toast.error(error.message)
     }
   }
+
   const viewSaleDetail = async (saleId) => {
     try {
       const response = await fetch(`/api/sales/${saleId}`)
       if (!response.ok) throw new Error('Error al cargar detalle de venta')
+      
       const sale = await response.json()
       setSelectedSale(sale)
       setShowDetailModal(true)
@@ -283,6 +327,7 @@ export default function SalesPage() {
       toast.error('Error al cargar el detalle de la venta')
     }
   }
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
@@ -291,7 +336,8 @@ export default function SalesPage() {
   }
   const formatDate = (date) => {
     return new Intl.DateTimeFormat('es-MX', {
-      year: 'numeric',      month: '2-digit',
+      year: 'numeric',
+      month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit'
@@ -302,8 +348,8 @@ export default function SalesPage() {
     if (selectedSale) {
       generateReceiptPDF(selectedSale)
       toast.success('PDF descargado exitosamente')
-    }
-  }
+    }  }
+
   useEffect(() => {
     const delayedSearch = setTimeout(() => {
       if (searchProduct) {
@@ -312,8 +358,10 @@ export default function SalesPage() {
         setProducts([])
       }
     }, 300)
+
     return () => clearTimeout(delayedSearch)
   }, [searchProduct])
+
   return (
     <div className="p-6 space-y-6">
       {/* Estadísticas */}
@@ -329,6 +377,7 @@ export default function SalesPage() {
             </div>
           </CardContent>
         </Card>
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
@@ -340,6 +389,7 @@ export default function SalesPage() {
             </div>
           </CardContent>
         </Card>
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
@@ -351,6 +401,7 @@ export default function SalesPage() {
             </div>
           </CardContent>
         </Card>
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
@@ -363,12 +414,14 @@ export default function SalesPage() {
           </CardContent>
         </Card>
       </div>
+
       {/* Acciones principales */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold">Punto de Venta</h1>
           <p className="text-muted-foreground">Gestiona las ventas y transacciones</p>
         </div>
+        
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => fetchSales()} variant="outline" size="sm">
             <IconRefresh className="h-4 w-4 mr-2" />
@@ -380,6 +433,7 @@ export default function SalesPage() {
           </Button>
         </div>
       </div>
+
       {/* Filtros y búsqueda */}
       <Card>
         <CardContent className="p-4">
@@ -396,6 +450,7 @@ export default function SalesPage() {
                 />
               </div>
             </div>
+            
             <div>
               <Label className="mb-2 block">Fecha Desde</Label>
               <Input
@@ -404,6 +459,7 @@ export default function SalesPage() {
                 onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
               />
             </div>
+            
             <div>
               <Label className="mb-2 block">Fecha Hasta</Label>
               <Input
@@ -412,6 +468,7 @@ export default function SalesPage() {
                 onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
               />
             </div>
+            
             <div>
               <Label className="mb-2 block">Tipo de Pago</Label>              <Select value={filters.paymentType} onValueChange={(value) => setFilters(prev => ({ ...prev, paymentType: value }))}>
                 <SelectTrigger>
@@ -427,6 +484,7 @@ export default function SalesPage() {
                 </SelectContent>
               </Select>
             </div>
+            
             <div className="flex items-end">
               <Button 
                 variant="outline" 
@@ -441,6 +499,7 @@ export default function SalesPage() {
           </div>
         </CardContent>
       </Card>
+
       {/* Lista de ventas */}
       <Card>
         <CardHeader>
@@ -467,6 +526,7 @@ export default function SalesPage() {
                       )}
                     </div>
                   </TableHead>
+                  
                   <TableHead 
                     onClick={() => handleSort('id')} 
                     className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
@@ -480,6 +540,7 @@ export default function SalesPage() {
                       )}
                     </div>
                   </TableHead>
+                  
                   <TableHead 
                     onClick={() => handleSort('customer.name')} 
                     className="cursor-pointer select-none hover:bg-muted/50 transition-colors hidden sm:table-cell"
@@ -493,6 +554,7 @@ export default function SalesPage() {
                       )}
                     </div>
                   </TableHead>
+                  
                   <TableHead 
                     onClick={() => handleSort('totalAmount')} 
                     className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
@@ -506,6 +568,7 @@ export default function SalesPage() {
                       )}
                     </div>
                   </TableHead>
+                  
                   <TableHead className="hidden md:table-cell">Tipo de Pago</TableHead>
                   <TableHead className="hidden lg:table-cell">Vendedor</TableHead>
                   <TableHead className="hidden lg:table-cell">Items</TableHead>
@@ -570,6 +633,7 @@ export default function SalesPage() {
           </div>
         </CardContent>
       </Card>
+
       {/* Modal POS */}
       <Dialog open={showPOSModal} onOpenChange={setShowPOSModal}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -593,6 +657,7 @@ export default function SalesPage() {
                   />
                 </div>
               </div>
+              
               {/* Lista de productos encontrados */}
               {products.length > 0 && (
                 <div className="border rounded-lg max-h-64 overflow-y-auto">
@@ -624,6 +689,7 @@ export default function SalesPage() {
                   ))}
                 </div>
               )}
+              
               {/* Información del cliente */}
               <div>
                 <Label className="mb-2 block">Cliente</Label>
@@ -639,6 +705,7 @@ export default function SalesPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  
                   <Button
                     variant="outline"
                     size="sm"
@@ -650,6 +717,7 @@ export default function SalesPage() {
                   </Button>
                 </div>
               </div>
+              
               {/* Tipo de pago */}
               <div>
                 <Label className="mb-2 block">Tipo de Pago</Label>                <Select value={posData.paymentType} onValueChange={(value) => setPosData(prev => ({ ...prev, paymentType: value }))}>
@@ -731,6 +799,7 @@ export default function SalesPage() {
                   )}
                 </div>
               </div>
+              
               {/* Totales */}
               <div className="border rounded-lg p-4 bg-muted/50">
                 <div className="space-y-2">
@@ -796,6 +865,7 @@ export default function SalesPage() {
           </div>
         </DialogContent>
       </Dialog>
+
       {/* Modal para nuevo cliente */}
       <Dialog open={showNewCustomerForm} onOpenChange={setShowNewCustomerForm}>
         <DialogContent>
@@ -815,6 +885,7 @@ export default function SalesPage() {
                 className="bg-white"
               />
             </div>
+            
             <div>
               <Label className="mb-2 block">Email</Label>
               <Input
@@ -825,6 +896,7 @@ export default function SalesPage() {
                 className="bg-white"
               />
             </div>
+            
             <div>
               <Label className="mb-2 block">Teléfono</Label>
               <Input
@@ -834,6 +906,7 @@ export default function SalesPage() {
                 className="bg-white"
               />
             </div>
+            
             <div>
               <Label className="mb-2 block">Dirección</Label>
               <Input
@@ -866,7 +939,9 @@ export default function SalesPage() {
             </div>
           </div>
         </DialogContent>
-      </Dialog>      {/* Modal de detalle de venta */}
+      </Dialog>
+
+      {/* Modal de detalle de venta */}
       <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -875,29 +950,30 @@ export default function SalesPage() {
               Información completa de la venta
             </DialogDescription>
           </DialogHeader>
+          
           {selectedSale && (
-            <div className="bg-white p-4 rounded-lg space-y-4">
+            <div className="space-y-6">
               {/* Información general */}
-              <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-gray-50">
+              <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">ID de Venta</Label>
-                  <p className="font-mono text-sm">{selectedSale.id}</p>
+                  <p className="font-mono">{selectedSale.id}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Fecha</Label>
-                  <p className="text-sm">{formatDate(selectedSale.saleDate)}</p>
+                  <p>{formatDate(selectedSale.saleDate)}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Cliente</Label>
-                  <p className="text-sm">{selectedSale.customer ? selectedSale.customer.name : 'Cliente General'}</p>
+                  <p>{selectedSale.customer ? selectedSale.customer.name : 'Cliente General'}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Vendedor</Label>
-                  <p className="text-sm">{selectedSale.user?.username || 'N/A'}</p>
+                  <p>{selectedSale.user?.username || 'N/A'}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Tipo de Pago</Label>
-                  <Badge variant="outline">{selectedSale.paymentType || 'EFECTIVO'}</Badge>
+                  <Badge>{selectedSale.paymentType || 'EFECTIVO'}</Badge>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Total</Label>
@@ -906,18 +982,18 @@ export default function SalesPage() {
                   </p>
                 </div>
               </div>
-
+              
               {/* Productos vendidos */}
               <div>
-                <Label className="mb-3 block font-medium">Productos Vendidos</Label>
-                <div className="border rounded-lg bg-white">
+                <Label className="mb-2 block font-medium">Productos Vendidos</Label>
+                <div className="border rounded-lg">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Producto</TableHead>
-                        <TableHead className="text-center">Cantidad</TableHead>
-                        <TableHead className="text-right">Precio</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead>Cantidad</TableHead>
+                        <TableHead>Precio</TableHead>
+                        <TableHead>Total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -925,15 +1001,15 @@ export default function SalesPage() {
                         <TableRow key={item.id}>
                           <TableCell>
                             <div>
-                              <p className="font-medium text-sm">{item.product.name}</p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="font-medium">{item.product.name}</p>
+                              <p className="text-sm text-muted-foreground">
                                 SKU: {item.product.sku || 'N/A'}
                               </p>
                             </div>
                           </TableCell>
-                          <TableCell className="text-center">{item.quantity}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(item.priceAtSale)}</TableCell>
-                          <TableCell className="text-right font-semibold">
+                          <TableCell>{item.quantity}</TableCell>
+                          <TableCell>{formatCurrency(item.priceAtSale)}</TableCell>
+                          <TableCell className="font-semibold">
                             {formatCurrency(item.quantity * item.priceAtSale)}
                           </TableCell>
                         </TableRow>
@@ -942,29 +1018,19 @@ export default function SalesPage() {
                   </Table>
                 </div>
               </div>
-
-              {/* Botones de acción */}
-              <div className="flex justify-end space-x-2 pt-4 border-t">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowDetailModal(false)}
-                >
-                  <IconX className="h-4 w-4 mr-2" />
+                <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setShowDetailModal(false)}>
                   Cerrar
                 </Button>
-                <Button 
-                  size="sm"
-                  onClick={handleDownloadPDF}
-                >
+                <Button onClick={handleDownloadPDF}>
                   <IconDownload className="h-4 w-4 mr-2" />
                   Descargar PDF
                 </Button>
               </div>
             </div>
           )}
-        </DialogContent></Dialog>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-

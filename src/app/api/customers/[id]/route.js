@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 const prisma = new PrismaClient()
 
 // GET - Obtener cliente por ID
 export async function GET(request, { params }) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const customer = await prisma.customer.findUnique({
       where: { id: params.id },
       include: {
@@ -39,6 +45,11 @@ export async function GET(request, { params }) {
 // PUT - Actualizar cliente
 export async function PUT(request, { params }) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
     const data = await request.json()
     const { name, email, phone, address, rfc } = data
 
@@ -111,6 +122,11 @@ export async function PUT(request, { params }) {
 // DELETE - Eliminar cliente
 export async function DELETE(request, { params }) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
     // Verificar si el cliente existe
     const existingCustomer = await prisma.customer.findUnique({
       where: { id: params.id },
