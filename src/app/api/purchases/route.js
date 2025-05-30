@@ -47,14 +47,14 @@ export async function POST(req) {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const data = await req.json();
+    }    const data = await req.json();
     
-    // Validación básica
-    if (!data.supplierId) {
+    console.log('Received purchase data:', JSON.stringify(data, null, 2));
+    console.log('Session user:', session.user);
+      // Validación básica
+    if (!data.supplierId || typeof data.supplierId !== 'string') {
       return NextResponse.json(
-        { error: 'ID del proveedor es requerido' }, 
+        { error: 'ID del proveedor es requerido y debe ser válido' }, 
         { status: 400 }
       );
     }
@@ -63,24 +63,74 @@ export async function POST(req) {
       return NextResponse.json(
         { error: 'Se requiere al menos un producto en la compra' }, 
         { status: 400 }
-      );
-    }
+      );    }
 
     // Validar items
     for (const item of data.items) {
-      if (!item.productId || !item.quantity || item.quantity <= 0 || !item.costAtPurchase || item.costAtPurchase <= 0) {
+      if (!item.productId || typeof item.productId !== 'string' || !item.quantity || item.quantity <= 0 || !item.costAtPurchase || item.costAtPurchase <= 0) {
         return NextResponse.json(
-          { error: 'Todos los productos deben tener ID, cantidad > 0 y costo > 0' }, 
+          { error: 'Todos los productos deben tener ID válido, cantidad > 0 y costo > 0' }, 
           { status: 400 }
         );
       }
     }
 
+    // Verificar que todos los productos existen
+    const productIds = data.items.map(item => item.productId);
+    const existingProducts = await prisma.product.findMany({
+      where: { 
+        id: { in: productIds },
+        isActive: true 
+      }
+    });
+    
+    if (existingProducts.length !== productIds.length) {
+      const missingProducts = productIds.filter(id => 
+        !existingProducts.find(product => product.id === id)
+      );
+      return NextResponse.json(
+        { error: `Los siguientes productos no existen o están inactivos: ${missingProducts.join(', ')}` }, 
+        { status: 400 }
+      );
+    }
+
     // Calcular total
     const totalAmount = data.items.reduce((sum, item) => 
       sum + (item.quantity * item.costAtPurchase), 0
-    );    // Crear compra en transacción
+    );    // Verificar que el proveedor existe
+    const supplier = await prisma.supplier.findUnique({
+      where: { id: data.supplierId }
+    });
+    
+    console.log('Supplier found:', supplier);
+    
+    if (!supplier) {
+      return NextResponse.json(
+        { error: 'El proveedor especificado no existe' }, 
+        { status: 400 }
+      );
+    }
+
+    // Verificar que el usuario existe
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id }
+    });
+    
+    console.log('User found:', user);
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Usuario no válido' }, 
+        { status: 400 }
+      );
+    }    // Crear compra en transacción
     const purchase = await prisma.$transaction(async (tx) => {
+      console.log('Creating purchase with:', {
+        supplierId: data.supplierId,
+        userId: session.user.id,
+        totalAmount: totalAmount
+      });
+      
       // Crear la compra
       const newPurchase = await tx.purchase.create({
         data: {
@@ -98,9 +148,16 @@ export async function POST(req) {
         }
       });
 
-      // Crear items de compra
+      console.log('Purchase created successfully:', newPurchase.id);      // Crear items de compra
       const createdItems = [];
       for (const item of data.items) {
+        console.log('Creating purchase item:', {
+          purchaseId: newPurchase.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          costAtPurchase: item.costAtPurchase
+        });
+        
         const purchaseItem = await tx.purchaseItem.create({
           data: {
             purchaseId: newPurchase.id,
@@ -113,7 +170,7 @@ export async function POST(req) {
           }
         });
         createdItems.push(purchaseItem);
-      }      // Actualizar stock de productos y crear movimientos de inventario
+      }// Actualizar stock de productos y crear movimientos de inventario
       for (const item of data.items) {
         // Actualizar stock del producto
         await tx.product.update({
@@ -158,14 +215,26 @@ export async function POST(req) {
       return finalPurchase;
     });
 
-    return NextResponse.json(purchase, { status: 201 });
-  } catch (error) {
+    return NextResponse.json(purchase, { status: 201 });  } catch (error) {
     console.error('Error creating purchase:', error);
+    console.error('Error details:', {
+      code: error.code,
+      message: error.message,
+      meta: error.meta
+    });
     
     if (error.code === 'P2002') {
       return NextResponse.json(
         { error: 'Ya existe una compra con ese número de factura' }, 
         { status: 409 }
+      );
+    }
+
+    if (error.code === 'P2003') {
+      console.error('Foreign key constraint failed:', error.meta);
+      return NextResponse.json(
+        { error: 'Error de referencia: Uno de los IDs especificados no existe en la base de datos' }, 
+        { status: 400 }
       );
     }
 
@@ -177,7 +246,7 @@ export async function POST(req) {
     }
 
     return NextResponse.json(
-      { error: 'Error al crear compra' }, 
+      { error: 'Error al crear compra', details: error.message }, 
       { status: 500 }
     );
   }
