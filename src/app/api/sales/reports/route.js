@@ -81,15 +81,16 @@ async function generateSummaryReport(where) {
       }
     }),
     // Conteo de ventas
-    prisma.sale.count({ where }),    // Revenue total
+    prisma.sale.count({ where }),
+    // Revenue total
     prisma.sale.aggregate({
       where,
-      _sum: { totalAmount: true }
+      _sum: { total: true }
     }),
     // Promedio por venta
     prisma.sale.aggregate({
       where,
-      _avg: { totalAmount: true }
+      _avg: { total: true }
     })
   ])
 
@@ -97,11 +98,12 @@ async function generateSummaryReport(where) {
   const totalProducts = sales.reduce((sum, sale) => 
     sum + sale.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0
   )
+
   return {
     summary: {
       totalSales: salesCount,
-      totalRevenue: totalRevenue._sum.totalAmount || 0,
-      averageTicket: averageTicket._avg.totalAmount || 0,
+      totalRevenue: totalRevenue._sum.total || 0,
+      averageTicket: averageTicket._avg.total || 0,
       totalProductsSold: totalProducts
     },
     sales
@@ -137,8 +139,9 @@ async function generateProductsReport(where) {
           sales: 0
         }
       }
-        productStats[productId].quantitySold += item.quantity
-      productStats[productId].totalRevenue += (item.quantity * item.priceAtSale)
+      
+      productStats[productId].quantitySold += item.quantity
+      productStats[productId].totalRevenue += item.total
       productStats[productId].sales += 1
     })
   })
@@ -173,8 +176,9 @@ async function generateCustomersReport(where) {
         averageTicket: 0
       }
     }
-      customerStats[customerId].salesCount += 1
-    customerStats[customerId].totalSpent += sale.totalAmount
+    
+    customerStats[customerId].salesCount += 1
+    customerStats[customerId].totalSpent += sale.total
   })
 
   // Calcular promedio
