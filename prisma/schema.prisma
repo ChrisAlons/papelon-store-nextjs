@@ -3,27 +3,44 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlserver"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// Enums converted to String for SQL Server compatibility
-// Role: ADMIN, SELLER
-// InventoryMovementType: VENTA, COMPRA_PROVEEDOR, AJUSTE_POSITIVO, AJUSTE_NEGATIVO, DEVOLUCION_CLIENTE, ENTRY, EXIT, ADJUSTMENT, DAMAGE
-// PaymentType: EFECTIVO, TARJETA_CREDITO, TARJETA_DEBITO, TRANSFERENCIA, OTRO
-// ExpenseCategory: SERVICIOS, RENTA, SUMINISTROS_OFICINA, LIMPIEZA, SUELDOS, MANTENIMIENTO, PUBLICIDAD, IMPUESTOS, OTROS
+enum Role {
+  ADMIN
+  SELLER
+}
+
+enum InventoryMovementType {
+  VENTA
+  COMPRA_PROVEEDOR
+  AJUSTE_POSITIVO
+  AJUSTE_NEGATIVO
+  DEVOLUCION_CLIENTE
+  ENTRY
+  EXIT
+  ADJUSTMENT
+  DAMAGE
+}
+
+enum PaymentType {
+  EFECTIVO
+  TARJETA_CREDITO
+  TARJETA_DEBITO
+  TRANSFERENCIA
+  OTRO
+}
+
 
 model User {
   id                   String                 @id @default(cuid())
   username             String                 @unique
   password             String
-  role                 String
+  role                 Role
   sales                Sale[]
   inventoryMovements   InventoryMovement[]
   purchases            Purchase[]
-  expenses             Expense[] // Added relation to Expense
-  cashRegisterSessions CashRegisterSession[] // Added relation to CashRegisterSession
-  saleReturns          SaleReturn[] // Added relation to SaleReturn
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
 }
@@ -42,7 +59,6 @@ model Product {
   saleItems            SaleItem[]
   inventoryMovements   InventoryMovement[]
   purchaseItems        PurchaseItem[]
-  saleReturnItems      SaleReturnItem[] // Added relation to SaleReturnItem
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
 }
@@ -69,10 +85,7 @@ model Sale {
   customer             Customer?              @relation(fields: [customerId], references: [id])
   items                SaleItem[]
   inventoryMovements   InventoryMovement[]    @relation("SaleInventoryMovements")
-  paymentType          String? // Added payment type
-  cashRegisterSessionId String? // Added for relation to CashRegisterSession
-  cashRegisterSession  CashRegisterSession?   @relation(fields: [cashRegisterSessionId], references: [id], onDelete: NoAction, onUpdate: NoAction) // Added relation to CashRegisterSession
-  returns              SaleReturn[]           @relation("OriginalSaleForReturn") // Added relation to SaleReturn
+  paymentType          PaymentType? // Added payment type
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
 }
@@ -85,7 +98,6 @@ model SaleItem {
   product     Product  @relation(fields: [productId], references: [id])
   quantity    Int
   priceAtSale Float
-  returnItems SaleReturnItem[] // Added relation to SaleReturnItem
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now())
 }
@@ -96,8 +108,8 @@ model InventoryMovement {
   product           Product               @relation(fields: [productId], references: [id])
   userId            String
   user              User                  @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  type              String
-  movementType      String? // Nuevo campo para compatibilidad
+  type              InventoryMovementType
+  movementType      InventoryMovementType? // Nuevo campo para compatibilidad
   quantity          Int? // Cantidad absoluta del movimiento
   quantityChange    Int // Cambio en el inventario (positivo/negativo)
   reason            String?
@@ -164,63 +176,3 @@ model Category {
   updatedAt   DateTime  @default(now())
 }
 
-// New Model: Expense
-model Expense {
-  id                      String          @id @default(cuid())
-  expenseDate             DateTime        @default(now())
-  description             String
-  amount                  Float
-  category                String?
-  userId                  String
-  user                    User            @relation(fields: [userId], references: [id])
-  invoiceOrReceiptNumber  String?
-  createdAt               DateTime        @default(now())
-  updatedAt               DateTime        @default(now())
-}
-
-// New Model: CashRegisterSession
-model CashRegisterSession {
-  id                      String    @id @default(cuid())
-  userId                  String
-  user                    User      @relation(fields: [userId], references: [id])
-  openingTime             DateTime  @default(now())
-  closingTime             DateTime?
-  initialBalance          Float
-  calculatedFinalBalance  Float?    // System calculated: initial + cash sales - cash withdrawals
-  actualFinalBalance      Float?    // Physical count at closing
-  difference              Float?    // calculatedFinalBalance - actualFinalBalance
-  notes                   String?
-  sales                   Sale[]    // Sales made during this session
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @default(now())
-}
-
-// New Model: SaleReturn
-model SaleReturn {
-  id                String           @id @default(cuid())
-  originalSaleId    String
-  originalSale      Sale             @relation(fields: [originalSaleId], references: [id], name: "OriginalSaleForReturn", onDelete: NoAction, onUpdate: NoAction)
-  returnDate        DateTime         @default(now())
-  reason            String?
-  totalRefundAmount Float
-  userId            String
-  user              User             @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  items             SaleReturnItem[]
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-}
-
-// New Model: SaleReturnItem
-model SaleReturnItem {
-  id                 String   @id @default(cuid())
-  saleReturnId       String
-  saleReturn         SaleReturn @relation(fields: [saleReturnId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  originalSaleItemId String   // To know exactly which item from the original sale is being returned
-  originalSaleItem   SaleItem @relation(fields: [originalSaleItemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  productId          String   // Denormalized for easier access, or could be derived via originalSaleItem.product
-  product            Product  @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  quantityReturned   Int
-  refundAmount       Float    // The amount refunded for this specific item
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-}
